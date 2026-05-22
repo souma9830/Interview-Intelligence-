@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { protect } = require('../middleware/authMiddleware');
-const { uploadResume, getResume } = require('../controllers/resumeController');
+const { uploadResume, getResume, analyzeJobDescription } = require('../controllers/resumeController');
 
 // Multer memory storage configuration (keeps binary data in req.file.buffer)
 const storage = multer.memoryStorage();
@@ -29,5 +29,6 @@ const upload = multer({
 // Secured Endpoints
 router.post('/upload', protect, upload.single('file'), uploadResume);
 router.get('/me', protect, getResume);
+router.post('/analyze-jd', protect, analyzeJobDescription);
 
 module.exports = router;

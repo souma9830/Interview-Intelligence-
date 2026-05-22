@@ -57,11 +57,41 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
     fetchExistingResume();
   }, []);
 
-  // Recalculate match details when Job Description is changed
+  // Recalculate match details when Job Description is changed (using debounced backend API checks)
   useEffect(() => {
-    if (parsedProfile && parsedProfile.skills) {
-      calculateMatchingScore(parsedProfile.skills, jobDescription);
+    if (!jobDescription) {
+      setMatchData(null);
+      return;
     }
+
+    const delayDebounceFn = setTimeout(async () => {
+      const token = localStorage.getItem('camsense_token');
+      if (!token) return;
+
+      try {
+        const response = await fetch('/api/resume/analyze-jd', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ jobDescription })
+        });
+        const resJson = await response.json();
+        
+        if (resJson.success && resJson.data) {
+          setMatchData(resJson.data);
+        }
+      } catch (err) {
+        console.error('JD analysis backend connection issue:', err);
+        // Soft fallback to client metrics calculation
+        if (parsedProfile && parsedProfile.skills) {
+          calculateMatchingScore(parsedProfile.skills, jobDescription);
+        }
+      }
+    }, 800);
+
+    return () => clearTimeout(delayDebounceFn);
   }, [jobDescription, parsedProfile]);
 
   // Rotator for progress telemetry details
@@ -538,31 +568,60 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
 
           {/* Dynamic Job Matching Alignment Card */}
           {matchData && (
-            <div className="glass-panel p-6 rounded-2xl space-y-4 animate-fade-in">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400 font-outfit">
-                  JD Skill Match Alignment
+            <div className="glass-panel p-6 rounded-2xl space-y-5 animate-fade-in relative overflow-hidden">
+              {/* Glowing decorative gradient behind card */}
+              <div className="absolute -top-10 -right-10 w-20 h-20 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+              
+              <div className="flex justify-between items-center border-b border-indigo-950/40 pb-3">
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 font-outfit">
+                  JD Requirements Analytics
                 </h3>
-                <span className="text-[9px] text-slate-500 font-bold font-mono">Telemetry Active</span>
+                <span className="text-[10px] text-indigo-400 font-bold bg-indigo-950/40 px-2 py-0.5 rounded-md border border-indigo-900/30">
+                  {matchData.jdSkills ? matchData.jdSkills.length : 0} Target Skills Extracted
+                </span>
               </div>
 
-              <div className="flex items-center space-x-4">
-                <div className={`p-4 rounded-xl border flex flex-col items-center justify-center font-outfit tracking-wide shrink-0 ${getGlowColor(matchData.matchPercentage)}`}>
+              {/* Compatibility score section */}
+              <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-4">
+                <div className={`p-4 rounded-xl border flex flex-col items-center justify-center font-outfit tracking-wide shrink-0 ${getGlowColor(matchData.matchPercentage)} w-20 h-20 shadow-md`}>
                   <span className="text-2xl font-black">{matchData.matchPercentage}%</span>
                   <span className="text-[8px] font-bold uppercase mt-0.5 text-slate-400">Match score</span>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[11.5px] leading-normal text-slate-300">
+                
+                <div className="space-y-3 flex-1 w-full">
+                  <p className="text-[11.5px] leading-normal text-slate-300 font-sans">
                     {matchData.recommendation}
                   </p>
+                  
+                  {/* Dynamic Progress Bar */}
+                  <div className="space-y-1 w-full">
+                    <div className="flex justify-between text-[9px] font-bold text-slate-500">
+                      <span>COMPATIBILITY INDEX</span>
+                      <span>{matchData.matchPercentage}% MATCH</span>
+                    </div>
+                    <div className="w-full bg-[#070a13] rounded-full h-2 overflow-hidden border border-indigo-950/40">
+                      <div 
+                        className="bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 h-2 rounded-full transition-all duration-1000"
+                        style={{ width: `${matchData.matchPercentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Matching Badges */}
-              <div className="space-y-2.5 pt-2.5 border-t border-indigo-950/40">
+              {/* Skills Overlays Section */}
+              <div className="space-y-3.5 pt-3 border-t border-indigo-950/40">
+                
+                {/* Matching Skills */}
                 <div className="space-y-1.5">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Matching Stack:</span>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400 flex items-center space-x-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                      <span>Matching Stack Matrix:</span>
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-500">{matchData.matchingSkills ? matchData.matchingSkills.length : 0} matching</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 bg-emerald-950/5 p-2 rounded-xl border border-emerald-950/20">
                     {matchData.matchingSkills && matchData.matchingSkills.length > 0 ? (
                       matchData.matchingSkills.map(skill => (
                         <span key={skill} className="px-2 py-0.5 text-[9.5px] font-bold rounded-md bg-emerald-950/40 border border-emerald-500/20 text-emerald-400 shadow shadow-emerald-950">
@@ -570,14 +629,21 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
                         </span>
                       ))
                     ) : (
-                      <span className="text-[10px] text-slate-600 italic">No exact overlays found</span>
+                      <span className="text-[10px] text-slate-600 italic px-1">No technology matches identified. Update requirements.</span>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-1.5 pt-1">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Missing Stack:</span>
-                  <div className="flex flex-wrap gap-1.5">
+                {/* Missing Skills */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400 flex items-center space-x-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+                      <span>Missing Target Technologies:</span>
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-500">{matchData.missingSkills ? matchData.missingSkills.length : 0} missing</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 bg-amber-950/5 p-2 rounded-xl border border-amber-950/20">
                     {matchData.missingSkills && matchData.missingSkills.length > 0 ? (
                       matchData.missingSkills.map(skill => (
                         <span key={skill} className="px-2 py-0.5 text-[9.5px] font-bold rounded-md bg-amber-950/40 border border-amber-500/20 text-amber-400 shadow shadow-amber-950">
@@ -585,10 +651,11 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
                         </span>
                       ))
                     ) : (
-                      <span className="text-[10px] text-emerald-400 italic">100% overlay compatibility!</span>
+                      <span className="text-[10px] text-emerald-400 italic px-1">100% overlays matched! Your resume supports all targets.</span>
                     )}
                   </div>
                 </div>
+
               </div>
             </div>
           )}
