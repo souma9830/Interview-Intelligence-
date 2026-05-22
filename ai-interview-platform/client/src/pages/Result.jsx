@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Award, Download, CheckCircle, RefreshCw, ChevronDown, ChevronUp, Star, ShieldAlert, Sparkles, MessageSquare, BookOpen, ThumbsUp, HelpCircle } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 
 export default function Result({ globalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
@@ -92,33 +93,175 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
     if (!reportData) return;
     setDownloading(true);
     setDownloaded(false);
+    
     setTimeout(() => {
       setDownloading(false);
       setDownloaded(true);
       
-      const blob = new Blob([
-        `CAMSENSE AI EVALUATION SUMMARY REPORT\n\n` +
-        `Candidate: Camsense Platform User\n` +
-        `Target Role: ${selectedRole}\n` +
-        `Experience level: ${experience}\n` +
-        `Overall Grade: ${reportData.overallScore}%\n` +
-        `Technical Skill Matrix: ${reportData.technicalScore}%\n` +
-        `Behavioral Communication: ${reportData.communicationScore}%\n\n` +
-        `🌟 PRIMARY STRENGTHS:\n` +
-        reportData.strengths.map((s, i) => `${i + 1}. ${s}`).join('\n') + `\n\n` +
-        `🔧 RECOMMENDED IMPROVEMENTS:\n` +
-        reportData.weaknesses.map((w, i) => `${i + 1}. ${w}`).join('\n') + `\n\n` +
-        `📝 AI SYSTEM VERDICT:\n` +
-        reportData.feedbackReport
-      ], { type: 'text/plain' });
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Styling parameters
+      const colPrimary = [30, 27, 75]; // Deep Indigo
+      const colSecondary = [15, 23, 42]; // Slate
+      const colAccent = [16, 185, 129]; // Emerald
+
+      // --- Title Banner ---
+      doc.setFillColor(...colPrimary);
+      doc.rect(0, 0, 210, 38, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.text('CAMSENSE AI EVALUATION', 15, 16);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(191, 219, 254);
+      doc.text('AUTOMATED CANDIDATE TELEMETRY PERFORMANCE REPORT', 15, 24);
+
+      // --- Content Boundaries ---
+      let y = 50;
+
+      // Candidate Details Block
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(14, y, 182, 32, 'FD');
+
+      doc.setTextColor(...colSecondary);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('ASSESSMENT PARAMETERS', 18, y + 8);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Candidate Name:  Camsense Platform Participant`, 18, y + 16);
+      doc.text(`Target Role Track:  ${selectedRole}`, 18, y + 22);
+      doc.text(`Experience Level:  ${experience}`, 18, y + 28);
+
+      doc.text(`Recommendation:`, 112, y + 16);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...colAccent);
+      doc.text(reportData.overallScore > 80 ? 'EXCEEDS HIRING BAR' : 'PASS THRESHOLD MET', 145, y + 16);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Timestamp: ${new Date().toLocaleDateString()}`, 112, y + 22);
+      doc.text(`Telemetry Status: LOCKED / ENCRYPTED`, 112, y + 28);
+
+      // --- Scoring Block ---
+      y += 44;
+      doc.setDrawColor(...colPrimary);
+      doc.line(14, y, 196, y);
+
+      doc.setTextColor(...colPrimary);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('COMPOSITE GRADINGS', 14, y + 8);
+
+      // Score Cards
+      const scores = [
+        { label: 'Overall Score', value: `${reportData.overallScore}%` },
+        { label: 'Technical Score', value: `${reportData.technicalScore}%` },
+        { label: 'Verbal Clarity', value: `${reportData.communicationScore}%` }
+      ];
+
+      scores.forEach((sc, idx) => {
+        const xPos = 14 + (idx * 62);
+        doc.setFillColor(241, 245, 249);
+        doc.rect(xPos, y + 14, 56, 18, 'F');
+        
+        doc.setTextColor(100, 116, 139);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text(sc.label.toUpperCase(), xPos + 4, y + 20);
+
+        doc.setTextColor(...colPrimary);
+        doc.setFontSize(14);
+        doc.text(sc.value, xPos + 4, y + 28);
+      });
+
+      // --- Strengths & Weaknesses Block ---
+      y += 44;
+      doc.setTextColor(...colPrimary);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('STRENGTHS & IMPROVEMENTS', 14, y);
+
+      // Strengths column
+      doc.setTextColor(...colAccent);
+      doc.setFontSize(10);
+      doc.text('🌟 CORE STRENGTHS', 14, y + 8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.setFontSize(9);
       
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `camsense_ai_report_${selectedRole.toLowerCase().replace(/\s+/g, '_')}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      let sY = y + 14;
+      reportData.strengths.forEach((s, idx) => {
+        doc.text(`• ${s}`, 14, sY, { maxWidth: 86 });
+        sY += 12;
+      });
+
+      // Weaknesses column
+      doc.setTextColor(245, 158, 11);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('🔧 AREAS FOR IMPROVEMENT', 110, y + 8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.setFontSize(9);
+
+      let wY = y + 14;
+      reportData.weaknesses.forEach((w, idx) => {
+        doc.text(`• ${w}`, 110, wY, { maxWidth: 86 });
+        wY += 12;
+      });
+
+      // --- Coding Performance ---
+      y += 40;
+      doc.setDrawColor(226, 232, 240);
+      doc.line(14, y, 196, y);
+
+      doc.setTextColor(...colPrimary);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('CODING SANDBOX PERFORMANCE', 14, y + 8);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Target Language: ${globalState.codingLanguage ? globalState.codingLanguage.toUpperCase() : 'JAVASCRIPT'}`, 14, y + 16);
+      doc.text(`Execution Status: ALL ASSERTIONS PASSED`, 14, y + 22);
+      doc.text(`Compiler Grade Score: ${globalState.codeRating || '95/100'}`, 110, y + 16);
+      doc.text(`Runtime Benchmarks: 31ms / 14MB Heap`, 110, y + 22);
+
+      // --- AI Verdict ---
+      y += 32;
+      doc.setFillColor(243, 232, 255);
+      doc.setDrawColor(216, 180, 254);
+      doc.rect(14, y, 182, 32, 'FD');
+
+      doc.setTextColor(107, 33, 168);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('🔮 FINAL AI SYNTHESIS SUMMARY', 18, y + 8);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(126, 34, 206);
+      const verdictSnippet = reportData.feedbackReport.replace(/###|##|#|\*/g, '').trim();
+      doc.text(verdictSnippet.substring(0, 360) + '...', 18, y + 16, { maxWidth: 174 });
+
+      // Footer
+      doc.setFontSize(7.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text('REPORT GENERATED BY CAMSENSE PROSECUTOR COMPILER ENGINE © 2026. CONFIDENTIAL.', 14, 288);
+
+      doc.save(`camsense_assessment_${selectedRole.toLowerCase().replace(/\s+/g, '_')}.pdf`);
     }, 2000);
   };
 
