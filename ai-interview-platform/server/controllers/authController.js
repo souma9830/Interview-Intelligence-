@@ -83,3 +83,34 @@ exports.login = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Get current user details
+// @route   GET /api/auth/me
+// @access  Private
+exports.getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    res.json({
+      success: true,
+      data: user || req.user
+    });
+  } catch (error) {
+    console.error('Get Me Error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Logout user
+// @route   POST /api/auth/logout
+// @access  Private
+exports.logout = async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('Logout Error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

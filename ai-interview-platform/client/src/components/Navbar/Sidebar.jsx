@@ -1,7 +1,7 @@
 import React from 'react';
-import { Home, Settings, Mic, Code2, Award, Cpu, ShieldCheck } from 'lucide-react';
+import { Home, Settings, Mic, Code2, Award, Cpu, ShieldCheck, LogOut } from 'lucide-react';
 
-export default function Sidebar({ currentTab, setCurrentTab }) {
+export default function Sidebar({ currentTab, setCurrentTab, user, onLogout }) {
   const menuItems = [
     { id: 'home', name: 'Home Portal', icon: Home, color: 'text-blue-400' },
     { id: 'setup', name: 'Interview Setup', icon: Settings, color: 'text-purple-400' },
@@ -9,6 +9,15 @@ export default function Sidebar({ currentTab, setCurrentTab }) {
     { id: 'coding', name: 'Coding Test Round', icon: Code2, color: 'text-indigo-400' },
     { id: 'result', name: 'Result Analytics', icon: Award, color: 'text-emerald-400' },
   ];
+
+  // Dynamic initials extraction
+  const getInitials = (fullName) => {
+    if (!fullName) return 'U';
+    return fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
+
+  const displayName = user ? user.name : 'Soumadeep Dev';
+  const displayInitials = getInitials(displayName);
 
   return (
     <aside className="w-72 bg-[#090d16]/80 border-r border-indigo-950/40 min-h-screen flex flex-col justify-between p-6 shrink-0 relative z-20 backdrop-blur-xl">
@@ -69,22 +78,33 @@ export default function Sidebar({ currentTab, setCurrentTab }) {
 
       {/* User Section / Health Indicator */}
       <div className="mt-auto pt-6 border-t border-indigo-950/30">
-        <div className="glass-panel p-4 rounded-xl flex items-center space-x-3">
-          <div className="relative">
-            <div className="w-10 h-10 rounded-lg bg-indigo-950 border border-indigo-800/40 flex items-center justify-center font-bold text-indigo-400 font-outfit">
-              SD
+        <div className="glass-panel p-4 rounded-xl flex items-center justify-between">
+          <div className="flex items-center space-x-3 min-w-0">
+            <div className="relative shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-indigo-950 border border-indigo-800/40 flex items-center justify-center font-bold text-indigo-400 font-outfit">
+                {displayInitials}
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-slate-950 flex items-center justify-center">
+                <span className="w-1 h-1 rounded-full bg-white animate-pulse"></span>
+              </div>
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-slate-950 flex items-center justify-center">
-              <span className="w-1 h-1 rounded-full bg-white animate-pulse"></span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-slate-200 truncate font-outfit">{displayName}</p>
+              <div className="flex items-center space-x-1 mt-0.5">
+                <ShieldCheck className="w-3 h-3 text-cyan-400 shrink-0" />
+                <span className="text-[10px] text-cyan-400 font-medium tracking-wide">AI Connected</span>
+              </div>
             </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-200 truncate font-outfit">Soumadeep Dev</p>
-            <div className="flex items-center space-x-1 mt-0.5">
-              <ShieldCheck className="w-3 h-3 text-cyan-400 shrink-0" />
-              <span className="text-[10px] text-cyan-400 font-medium tracking-wide">AI Connected</span>
-            </div>
-          </div>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              title="Logout session"
+              className="p-2 bg-slate-950 hover:bg-rose-950/40 border border-indigo-950 hover:border-rose-900/30 rounded-lg text-slate-400 hover:text-rose-400 transition-all duration-300"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </aside>
