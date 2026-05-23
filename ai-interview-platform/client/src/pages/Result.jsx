@@ -29,9 +29,12 @@ export default function Result({ globalState, setGlobalState, setCurrentTab }) {
         const violations = globalState.violationCount || 0;
         if (violations > 0) {
           const deduction = Math.min(violations * 5, 25);
-          data.overallScore = Math.max(0, data.overallScore - deduction);
+          data.overallScore = Math.max(0, (data.overallScore || 80) - deduction);
           data.weaknesses = [...(data.weaknesses || []), `Integrity Warning: Detected ${violations} instance(s) of tab-switching or exiting fullscreen mode.`];
         }
+        data.resumeScore = data.resumeScore || 85;
+        data.interviewScore = data.interviewScore || 82;
+        data.codingScore = data.codingScore || 88;
         setReportData(data);
       } else {
         triggerLocalFallback();
@@ -47,21 +50,20 @@ export default function Result({ globalState, setGlobalState, setCurrentTab }) {
     const isCodeGood = !!globalState.finalCode;
     const codingScore = globalState.codingScore || (isCodeGood ? 90 : 40);
     const qScores = globalState.questionScores || [];
-    const avgQScores = qScores.length > 0 ? Math.round(qScores.reduce((a, b) => a + b, 0) / qScores.length) : (isCodeGood ? 85 : 70);
+    const interviewScore = qScores.length > 0 ? Math.round(qScores.reduce((a, b) => a + b, 0) / qScores.length) : (isCodeGood ? 85 : 70);
+    const resumeScore = globalState.resumeUploaded ? 88 : 75;
 
-    const technical = Math.round((avgQScores + codingScore) / 2);
-    const communication = 85;
-    let overall = Math.round((technical + communication) / 2);
+    let overall = Math.round((resumeScore + interviewScore + codingScore) / 3);
 
     const violations = globalState.violationCount || 0;
     const deduction = Math.min(violations * 5, 25);
     overall = Math.max(0, overall - deduction);
 
     const rawBreakdowns = {
-      'Frontend Engineer': { syntaxAccuracy: Math.round(codingScore * 1.02), systemScalability: Math.round(avgQScores * 0.98), verbalCommunication: 88, complexityOptimization: Math.round(codingScore * 0.95) },
-      'Backend Engineer': { syntaxAccuracy: Math.round(codingScore * 1.05), systemScalability: Math.round(avgQScores * 0.95), verbalCommunication: 84, complexityOptimization: Math.round(codingScore * 0.98) },
-      'Fullstack Engineer': { syntaxAccuracy: Math.round(codingScore * 1.01), systemScalability: Math.round(avgQScores * 0.99), verbalCommunication: 91, complexityOptimization: Math.round(codingScore * 0.96) },
-      'AI / ML Engineer': { syntaxAccuracy: Math.round(codingScore * 1.03), systemScalability: Math.round(avgQScores * 0.97), verbalCommunication: 87, complexityOptimization: Math.round(codingScore * 0.94) }
+      'Frontend Engineer': { syntaxAccuracy: Math.round(codingScore * 1.02), systemScalability: Math.round(interviewScore * 0.98), verbalCommunication: 88, complexityOptimization: Math.round(codingScore * 0.95) },
+      'Backend Engineer': { syntaxAccuracy: Math.round(codingScore * 1.05), systemScalability: Math.round(interviewScore * 0.95), verbalCommunication: 84, complexityOptimization: Math.round(codingScore * 0.98) },
+      'Fullstack Engineer': { syntaxAccuracy: Math.round(codingScore * 1.01), systemScalability: Math.round(interviewScore * 0.99), verbalCommunication: 91, complexityOptimization: Math.round(codingScore * 0.96) },
+      'AI / ML Engineer': { syntaxAccuracy: Math.round(codingScore * 1.03), systemScalability: Math.round(interviewScore * 0.97), verbalCommunication: 87, complexityOptimization: Math.round(codingScore * 0.94) }
     };
     const selectedBreakdown = rawBreakdowns[selectedRole] || rawBreakdowns['Frontend Engineer'];
     const breakdown = {
@@ -73,8 +75,9 @@ export default function Result({ globalState, setGlobalState, setCurrentTab }) {
 
     setReportData({
       overallScore: overall,
-      technicalScore: technical,
-      communicationScore: communication,
+      resumeScore,
+      interviewScore,
+      codingScore,
       breakdown,
       strengths: [
         'Exceptional logical breakdown of architectural and scaling boundaries.',
@@ -157,28 +160,28 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
       doc.rect(14, y + 12, 56, 16, 'F');
       doc.setTextColor(100, 100, 100);
       doc.setFontSize(8);
-      doc.text('OVERALL SCORE', 18, y + 18);
+      doc.text('RESUME SCORE', 18, y + 18);
       doc.setTextColor(15, 15, 15);
       doc.setFontSize(12);
-      doc.text(`${reportData.overallScore}%`, 18, y + 25);
+      doc.text(`${reportData.resumeScore}%`, 18, y + 25);
 
       doc.setFillColor(245, 245, 245);
       doc.rect(76, y + 12, 56, 16, 'F');
       doc.setTextColor(100, 100, 100);
       doc.setFontSize(8);
-      doc.text('TECHNICAL SCORE', 80, y + 18);
+      doc.text('INTERVIEW SCORE', 80, y + 18);
       doc.setTextColor(15, 15, 15);
       doc.setFontSize(12);
-      doc.text(`${reportData.technicalScore}%`, 80, y + 25);
+      doc.text(`${reportData.interviewScore}%`, 80, y + 25);
 
       doc.setFillColor(245, 245, 245);
       doc.rect(138, y + 12, 56, 16, 'F');
       doc.setTextColor(100, 100, 100);
       doc.setFontSize(8);
-      doc.text('VERBAL CLARITY', 142, y + 18);
+      doc.text('CODING SCORE', 142, y + 18);
       doc.setTextColor(15, 15, 15);
       doc.setFontSize(12);
-      doc.text(`${reportData.communicationScore}%`, 142, y + 25);
+      doc.text(`${reportData.codingScore}%`, 142, y + 25);
 
       y += 42;
       doc.setTextColor(...colPrimary);
@@ -269,21 +272,31 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500' }}>
-                <span style={{ color: '#ccc' }}>Technical & coding capability</span>
-                <span style={{ color: '#fff', fontWeight: '600' }}>{report.technicalScore}%</span>
+                <span style={{ color: '#ccc' }}>Resume Profile Match</span>
+                <span style={{ color: '#fff', fontWeight: '600' }}>{report.resumeScore}%</span>
               </div>
               <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${report.technicalScore}%`, background: '#fff', borderRadius: '2px' }} />
+                <div style={{ height: '100%', width: `${report.resumeScore}%`, background: '#fff', borderRadius: '2px' }} />
               </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500' }}>
-                <span style={{ color: '#ccc' }}>Verbal explanation & clarity</span>
-                <span style={{ color: '#fff', fontWeight: '600' }}>{report.communicationScore}%</span>
+                <span style={{ color: '#ccc' }}>Interview & Verbal Round</span>
+                <span style={{ color: '#fff', fontWeight: '600' }}>{report.interviewScore}%</span>
               </div>
               <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${report.communicationScore}%`, background: '#fff', borderRadius: '2px' }} />
+                <div style={{ height: '100%', width: `${report.interviewScore}%`, background: '#fff', borderRadius: '2px' }} />
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500' }}>
+                <span style={{ color: '#ccc' }}>Coding Environment Round</span>
+                <span style={{ color: '#fff', fontWeight: '600' }}>{report.codingScore}%</span>
+              </div>
+              <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${report.codingScore}%`, background: '#fff', borderRadius: '2px' }} />
               </div>
             </div>
           </div>

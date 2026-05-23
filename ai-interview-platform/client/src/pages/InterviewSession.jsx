@@ -38,7 +38,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
         if (prev <= 1) {
           clearInterval(timer);
           setSystemAlert('Time is up. Saving your answer...');
-          handleAnswerSubmit();
+          handleAnswerSubmit(true);
           return 0;
         }
         return prev - 1;
@@ -218,32 +218,40 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     }
   };
 
-  const handleAnswerSubmit = async () => {
-    if (!userTranscript || !userTranscript.trim()) { setSystemAlert('Please provide an answer first.'); return; }
+  const handleAnswerSubmit = async (isTimeoutOrEvent) => {
+    const isTimeout = isTimeoutOrEvent === true;
+    const text = userTranscript?.trim() || '';
+    if (!text && !isTimeout) { setSystemAlert('Please provide an answer first.'); return; }
+    
     stopVoiceRecording(); setTimerActive(false); setIsEvaluating(true);
-    setSystemAlert('Evaluating your response…');
-    let answerScore = 8.5; // Default technical fallback if connection fails
+    setSystemAlert(text ? 'Evaluating your response…' : 'Time limit reached. 0 points awarded.');
+    
+    let answerScore = text ? 8.5 : 0; // Default technical fallback
     try {
-      const token = localStorage.getItem('camsense_token') || 'demo_token_active';
-      const res = await fetch('/api/interview/evaluate-answer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ interviewId: interviewId === 'demo_session_active' ? undefined : interviewId, questionIndex: currentIdx, candidateAnswer: userTranscript, question: questions[currentIdx]?.questionText, category: questions[currentIdx]?.category, role: selectedRole }),
-      });
-      const json = await res.json();
-      if (json.success && json.data) {
-        setSystemAlert(`Score: ${json.data.score}/10 — ${json.data.feedback}`);
-        answerScore = Number(json.data.score) || 8.5;
-        await new Promise(r => setTimeout(r, 4000));
+      if (text) {
+        const token = localStorage.getItem('camsense_token') || 'demo_token_active';
+        const res = await fetch('/api/interview/evaluate-answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ interviewId: interviewId === 'demo_session_active' ? undefined : interviewId, questionIndex: currentIdx, candidateAnswer: text, question: questions[currentIdx]?.questionText, category: questions[currentIdx]?.category, role: selectedRole }),
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          setSystemAlert(`Score: ${json.data.score}/10 — ${json.data.feedback}`);
+          answerScore = Number(json.data.score) || 8.5;
+          await new Promise(r => setTimeout(r, 4000));
+        }
+      } else {
+        await new Promise(r => setTimeout(r, 2000)); // Short delay to show the 0 points alert
       }
     } catch { /* continue */ }
 
     setIsEvaluating(false);
     const answers = [...(globalState.userAnswers || [])];
-    answers[currentIdx] = userTranscript;
+    answers[currentIdx] = text || 'No answer provided (timeout)';
 
     const scores = [...(globalState.questionScores || [])];
-    scores[currentIdx] = Math.round(answerScore * 10); // scale 1-10 to 10-100
+    scores[currentIdx] = text ? Math.round(answerScore * 10) : 0; 
 
     setGlobalState(p => ({ ...p, userAnswers: answers, questionScores: scores }));
 
@@ -252,6 +260,10 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
       setUserTranscript('');
       setTimeLeft(60);
     } else {
+      if (videoRef.current && videoRef.current.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+      }
+      setCameraActive(false);
       setCurrentTab('coding');
     }
   };

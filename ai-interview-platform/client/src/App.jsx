@@ -8,13 +8,14 @@ import CodingTest from './pages/CodingTest';
 import Result from './pages/Result';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Landing from './pages/Landing';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('camsense_token') || '');
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(!!token);
-  const [currentTab, setCurrentTab] = useState(token ? 'home' : 'login');
+  const [currentTab, setCurrentTab] = useState(token ? 'home' : 'landing');
 
   const [globalState, setGlobalState] = useState({
     role: 'Frontend Engineer',
@@ -42,7 +43,7 @@ export default function App() {
         .finally(() => setCheckingAuth(false));
     } else {
       setCheckingAuth(false);
-      if (currentTab !== 'signup') setCurrentTab('login');
+      if (currentTab !== 'signup' && currentTab !== 'login') setCurrentTab('landing');
     }
   }, [token]);
 
@@ -54,6 +55,7 @@ export default function App() {
 
   const renderContent = () => {
     switch (currentTab) {
+      case 'landing': return <Landing setCurrentTab={setCurrentTab} />;
       case 'login': return <Login setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} />;
       case 'signup': return <Signup setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} />;
       case 'home': return <Home setCurrentTab={setCurrentTab} />;
@@ -75,7 +77,7 @@ export default function App() {
     );
   }
 
-  const isAuthPage = currentTab === 'login' || currentTab === 'signup';
+  const isAuthPage = currentTab === 'login' || currentTab === 'signup' || currentTab === 'landing';
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0a0a', fontFamily: 'Inter, sans-serif', color: '#e0e0e0' }}>
