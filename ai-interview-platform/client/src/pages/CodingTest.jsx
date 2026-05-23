@@ -1,321 +1,39 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Code2, Terminal, Play, CheckSquare, ChevronRight, FileCode, Check, RefreshCw, Mic, MicOff, AlertCircle, Award } from 'lucide-react';
+import Editor from '@monaco-editor/react';
 
 const LANGUAGE_BOILERPLATES = {
   javascript: {
     ext: 'js',
     label: 'JavaScript',
-    'Frontend Engineer': `class EventEmitter {
-  constructor() {
-    this.events = new Map();
-  }
-
-  subscribe(eventName, callback) {
-    if (!this.events.has(eventName)) {
-      this.events.set(eventName, []);
-    }
-    this.events.get(eventName).push(callback);
-
-    return {
-      release: () => {
-        const callbacks = this.events.get(eventName) || [];
-        const index = callbacks.indexOf(callback);
-        if (index !== -1) {
-          callbacks.splice(index, 1);
-        }
-      }
-    };
-  }
-
-  emit(eventName, ...args) {
-    const callbacks = this.events.get(eventName) || [];
-    return callbacks.map(cb => cb(...args));
-  }
-}`,
-    'Backend Engineer': `class TokenBucket {
-  constructor(capacity, refillRate) {
-    this.capacity = capacity;
-    this.refillRate = refillRate;
-    this.tokens = capacity;
-    this.lastRefill = Date.now() / 1000;
-  }
-
-  allowRequest(tokensRequired) {
-    this.refill();
-    if (this.tokens >= tokensRequired) {
-      this.tokens -= tokensRequired;
-      return true;
-    }
-    return false;
-  }
-
-  refill() {
-    const now = Date.now() / 1000;
-    const elapsed = now - this.lastRefill;
-    this.tokens = Math.min(this.capacity, this.tokens + (elapsed * this.refillRate));
-    this.lastRefill = now;
-  }
-}`,
-    'Fullstack Engineer': `async function fetchWithRetry(url, options = {}, maxRetries = 3, timeoutMs = 3000) {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const response = await fetch(url, { ...options, signal: controller.signal });
-      clearTimeout(id);
-      if (!response.ok) throw new Error("HTTP error");
-      return await response.json();
-    } catch (err) {
-      clearTimeout(id);
-      if (attempt === maxRetries) {
-        throw new Error("All retry attempts failed: " + err.message);
-      }
-      await new Promise(res => setTimeout(res, 500 * attempt));
-    }
-  }
-}`,
-    'AI / ML Engineer': `function cosineSimilarity(vecA, vecB) {
-  let dotProduct = 0, normA = 0, normB = 0;
-  for (let i = 0; i < vecA.length; i++) {
-    dotProduct += vecA[i] * vecB[i];
-    normA += vecA[i] * vecA[i];
-    normB += vecB[i] * vecB[i];
-  }
-  if (normA === 0 || normB === 0) return 0;
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-}`
+    'Frontend Engineer': `// Write your custom solution here\n`,
+    'Backend Engineer': `// Write your custom solution here\n`,
+    'Fullstack Engineer': `// Write your custom solution here\n`,
+    'AI / ML Engineer': `// Write your custom solution here\n`
   },
   cpp: {
     ext: 'cpp',
     label: 'C++',
-    'Frontend Engineer': `#include <iostream>
-#include <unordered_map>
-#include <vector>
-#include <functional>
-
-class EventEmitter {
-private:
-    std::unordered_map<std::string, std::vector<std::function<void()>>> events;
-public:
-    void subscribe(std::string eventName, std::function<void()> callback) {
-        events[eventName].push_back(callback);
-    }
-
-    void emit(std::string eventName) {
-        for (auto& cb : events[eventName]) {
-            cb();
-        }
-    }
-};`,
-    'Backend Engineer': `#include <iostream>
-#include <algorithm>
-#include <chrono>
-
-class TokenBucket {
-private:
-    double capacity;
-    double refillRate;
-    double tokens;
-    double lastRefill;
-public:
-    TokenBucket(double cap, double refill) : capacity(cap), refillRate(refill), tokens(cap) {
-        lastRefill = std::chrono::duration_cast<std::chrono::seconds>(
-            std::chrono::system_clock::now().time_since_epoch()
-        ).count();
-    }
-
-    bool allowRequest(double tokensRequired) {
-        refill();
-        if (tokens >= tokensRequired) {
-            tokens -= tokensRequired;
-            return true;
-        }
-        return false;
-    }
-
-    void refill() {
-        double now = std::chrono::duration_cast<std::chrono::seconds>(
-            std::chrono::system_clock::now().time_since_epoch()
-        ).count();
-        double elapsed = now - lastRefill;
-        tokens = std::min(capacity, tokens + (elapsed * refillRate));
-        lastRefill = now;
-    }
-};`,
-    'Fullstack Engineer': `#include <iostream>
-#include <string>
-#include <thread>
-#include <stdexcept>
-
-class FetchRetryOrchestrator {
-public:
-    std::string fetchWithRetry(std::string url, int maxRetries, int timeoutMs) {
-        for (int attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                // simulated secure API request channel
-                return "{\\"status\\":\\"success\\"}";
-            } catch (...) {
-                if (attempt == maxRetries) throw std::runtime_error("All retries failed");
-                std::this_thread::sleep_for(std::chrono::milliseconds(500 * attempt));
-            }
-        }
-        return "";
-    }
-};`,
-    'AI / ML Engineer': `#include <vector>
-#include <cmath>
-
-class CosineSimilarityRanker {
-public:
-    double cosineSimilarity(const std::vector<double>& vecA, const std::vector<double>& vecB) {
-        double dotProduct = 0.0, normA = 0.0, normB = 0.0;
-        for (size_t i = 0; i < vecA.size(); i++) {
-            dotProduct += vecA[i] * vecB[i];
-            normA += vecA[i] * vecA[i];
-            normB += vecB[i] * vecB[i];
-        }
-        if (normA == 0.0 || normB == 0.0) return 0.0;
-        return dotProduct / (std::sqrt(normA) * std::sqrt(normB));
-    }
-};`
+    'Frontend Engineer': `// Write your custom solution here\n`,
+    'Backend Engineer': `// Write your custom solution here\n`,
+    'Fullstack Engineer': `// Write your custom solution here\n`,
+    'AI / ML Engineer': `// Write your custom solution here\n`
   },
   java: {
     ext: 'java',
     label: 'Java',
-    'Frontend Engineer': `import java.util.*;
-
-public class EventEmitter {
-    private Map<String, List<Runnable>> events = new HashMap<>();
-
-    public void subscribe(String eventName, Runnable callback) {
-        events.computeIfAbsent(eventName, k -> new ArrayList<>()).add(callback);
-    }
-
-    public void emit(String eventName) {
-        if (events.containsKey(eventName)) {
-            for (Runnable cb : events.get(eventName)) {
-                cb.run();
-            }
-        }
-    }
-}`,
-    'Backend Engineer': `import java.time.Instant;
-
-public class TokenBucket {
-    private final double capacity;
-    private final double refillRate;
-    private double tokens;
-    private double lastRefill;
-
-    public TokenBucket(double capacity, double refillRate) {
-        this.capacity = capacity;
-        this.refillRate = refillRate;
-        this.tokens = capacity;
-        this.lastRefill = Instant.now().getEpochSecond();
-    }
-
-    public synchronized boolean allowRequest(double tokensRequired) {
-        refill();
-        if (tokens >= tokensRequired) {
-            tokens -= tokensRequired;
-            return true;
-        }
-        return false;
-    }
-
-    private void refill() {
-        double now = Instant.now().getEpochSecond();
-        double elapsed = now - lastRefill;
-        tokens = Math.min(capacity, tokens + (elapsed * refillRate));
-        lastRefill = now;
-    }
-}`,
-    'Fullstack Engineer': `public class FetchRetryOrchestrator {
-    public String fetchWithRetry(String url, int maxRetries, int timeoutMs) throws Exception {
-        for (int attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                // Simulating highly concurrent request structures
-                return "{\\"success\\": true}";
-            } catch (Exception e) {
-                if (attempt == maxRetries) throw e;
-                Thread.sleep(500 * attempt);
-            }
-        }
-        return null;
-    }
-}`,
-    'AI / ML Engineer': `public class CosineRanker {
-    public double cosineSimilarity(double[] vecA, double[] vecB) {
-        double dotProduct = 0.0, normA = 0.0, normB = 0.0;
-        for (int i = 0; i < vecA.length; i++) {
-            dotProduct += vecA[i] * vecB[i];
-            normA += vecA[i] * vecA[i];
-            normB += vecB[i] * vecB[i];
-        }
-        if (normA == 0.0 || normB == 0.0) return 0.0;
-        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-    }
-}`
+    'Frontend Engineer': `// Write your custom solution here\n`,
+    'Backend Engineer': `// Write your custom solution here\n`,
+    'Fullstack Engineer': `// Write your custom solution here\n`,
+    'AI / ML Engineer': `// Write your custom solution here\n`
   },
   python: {
     ext: 'py',
     label: 'Python',
-    'Frontend Engineer': `class EventEmitter:
-    def __init__(self):
-        self.events = {}
-
-    def subscribe(self, event_name, callback):
-        if event_name not in self.events:
-            self.events[event_name] = []
-        self.events[event_name].append(callback)
-        
-        return {"release": lambda: self.events[event_name].remove(callback)}
-
-    def emit(self, event_name, *args):
-        callbacks = self.events.get(event_name, [])
-        return [cb(*args) for cb in callbacks]`,
-    'Backend Engineer': `import time
-
-class TokenBucket:
-    def __init__(self, capacity, refill_rate):
-        self.capacity = capacity
-        self.refill_rate = refill_rate
-        self.tokens = capacity
-        self.last_refill = time.time()
-
-    def allow_request(self, tokens_required):
-        self.refill()
-        if self.tokens >= tokens_required:
-            self.tokens -= tokens_required
-            return True
-        return False
-
-    def refill(self):
-        now = time.time()
-        elapsed = now - self.last_refill
-        self.tokens = min(self.capacity, self.tokens + (elapsed * self.refill_rate))
-        self.last_refill = now`,
-    'Fullstack Engineer': `import time
-
-def fetch_with_retry(url, options=None, max_retries=3, timeout_ms=3000):
-    for attempt in range(1, max_retries + 1):
-        try:
-            # Simulating fetch boundaries
-            return {"success": True}
-        except Exception as e:
-            if attempt == max_retries:
-                raise Exception(f"All retry attempts failed: {str(e)}")
-            time.sleep(0.5 * attempt)`,
-    'AI / ML Engineer': `import math
-
-def cosine_similarity(vec_a, vec_b):
-    dot_product = sum(a * b for a, b in zip(vec_a, vec_b))
-    norm_a = sum(a * a for a in vec_a)
-    norm_b = sum(b * b for b in vec_b)
-    if norm_a == 0 or norm_b == 0:
-        return 0.0
-    return dot_product / (math.sqrt(norm_a) * math.sqrt(norm_b))`
+    'Frontend Engineer': `# Write your custom solution here\n`,
+    'Backend Engineer': `# Write your custom solution here\n`,
+    'Fullstack Engineer': `# Write your custom solution here\n`,
+    'AI / ML Engineer': `# Write your custom solution here\n`
   }
 };
 
@@ -370,7 +88,15 @@ const ROLE_PROBLEMS = {
 
 export default function CodingTest({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
-  const problem = ROLE_PROBLEMS[selectedRole] || ROLE_PROBLEMS['Frontend Engineer'];
+  const aiCodingQuestion = globalState.questions?.find(q => q.category === 'coding');
+  
+  const problem = aiCodingQuestion ? {
+    title: "1. Resume-based Coding Challenge",
+    difficulty: globalState.difficulty || "Medium",
+    timeLimit: "2000ms",
+    memoryLimit: "256MB",
+    description: aiCodingQuestion.questionText
+  } : (ROLE_PROBLEMS[selectedRole] || ROLE_PROBLEMS['Frontend Engineer']);
 
   const [language, setLanguage] = useState('javascript');
   const [code, setCode] = useState('');
@@ -487,7 +213,8 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
           role: selectedRole,
           code,
           language,
-          voiceExplanation: explanationText
+          voiceExplanation: explanationText,
+          questionText: problem.description
         })
       });
 
@@ -498,16 +225,22 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
         
         // Log individual compiler steps to terminal
         const newLogs = [
-          `> Compiling solution.${LANGUAGE_BOILERPLATES[language]?.ext}...`,
-          "✔ Compilation completed successfully.",
-          "> Deploying test cases suite assertions..."
+          `> Compiling solution.${LANGUAGE_BOILERPLATES[language]?.ext}...`
         ];
+
+        if (report.containsSyntaxIssues) {
+          newLogs.push("❌ Compilation Error Detected.");
+        } else {
+          newLogs.push("✔ Compilation completed successfully.");
+          newLogs.push("> Deploying test cases suite assertions...");
+        }
 
         report.testCases.forEach(tc => {
           if (tc.passed) {
             newLogs.push(`✔ [PASSED] ${tc.name} (${tc.duration || '5ms'})`);
           } else {
-            newLogs.push(`❌ [FAILED] ${tc.name}: ${tc.error}`);
+            newLogs.push(`❌ [FAILED] ${tc.name}:`);
+            newLogs.push(`   ${tc.error || 'Execution failed'}`);
           }
         });
 
@@ -704,20 +437,27 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
               </div>
             </div>
 
-            {/* Custom line-numbered text area wrapper */}
-            <div className="flex-1 flex bg-[#060910] font-mono text-[12px] leading-relaxed relative overflow-hidden">
-              {/* Fake line numbers */}
-              <div className="w-12 bg-slate-950/40 border-r border-indigo-950/40 text-slate-600 select-none text-right pr-3 pt-4 space-y-0.5">
-                {Array.from({ length: 15 }).map((_, i) => (
-                  <div key={i}>{i + 1}</div>
-                ))}
-              </div>
-              
-              <textarea
+            {/* Monaco Editor Integration */}
+            <div className="flex-1 w-full relative">
+              <Editor
+                height="100%"
+                language={language}
+                theme="vs-dark"
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
-                className="flex-1 bg-transparent p-4 text-cyan-200 placeholder-cyan-900/50 focus:outline-none resize-none overflow-y-auto whitespace-pre font-mono font-medium focus:ring-0 selection:bg-indigo-950/50"
-                spellCheck="false"
+                onChange={(value) => setCode(value || '')}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 14,
+                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                  lineHeight: 24,
+                  padding: { top: 16, bottom: 16 },
+                  scrollBeyondLastLine: false,
+                  smoothScrolling: true,
+                  cursorBlinking: "smooth",
+                  cursorSmoothCaretAnimation: "on",
+                  formatOnPaste: true,
+                }}
+                loading={<div className="h-full w-full flex items-center justify-center text-indigo-400 font-mono text-xs">Loading Editor Environment...</div>}
               />
             </div>
           </div>

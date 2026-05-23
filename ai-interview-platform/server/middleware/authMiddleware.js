@@ -12,6 +12,16 @@ const protect = async (req, res, next) => {
       // Get token from header
       token = req.headers.authorization.split(' ')[1];
 
+      // Bypass for demo token
+      if (token === 'demo_token_active') {
+        req.user = {
+          _id: '664e4ea4a93a40498eb79e2a',
+          name: 'Demo Candidate',
+          email: 'candidate@camsense.ai',
+        };
+        return next();
+      }
+
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
 

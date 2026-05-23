@@ -8,7 +8,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   // Extract questions list from state or fallback to tracks
   const [questions, setQuestions] = useState(
     globalState.questions && globalState.questions.length > 0
-      ? globalState.questions
+      ? globalState.questions.filter(q => q.category !== 'coding')
       : [
           { questionText: "Explain major architectural constraints of this track.", category: 'technical' },
           { questionText: "How do you profile, identify, and eliminate performance bottlenecks?", category: 'technical' },
@@ -21,6 +21,8 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [userTranscript, setUserTranscript] = useState('');
   const [systemAlert, setSystemAlert] = useState('System armed. Please play the question.');
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
   
   // Webcam states
   const videoRef = useRef(null);
@@ -117,12 +119,13 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
 
   // Play question audio automatically on index shift
   useEffect(() => {
+    if (!hasStarted) return;
     // Small delay to let speech engines load voices
     const timer = setTimeout(() => {
       speakQuestion();
     }, 1200);
     return () => clearTimeout(timer);
-  }, [currentIdx]);
+  }, [currentIdx, hasStarted]);
 
   // Speech-To-Text Recognition configuration
   const startVoiceRecording = () => {
@@ -287,13 +290,50 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     }
   };
 
-  const handleAnswerSubmit = () => {
+  const handleAnswerSubmit = async () => {
+    if (!userTranscript || userTranscript.trim().length === 0) {
+      setSystemAlert('⚠️ Please provide an answer before proceeding.');
+      return;
+    }
+
     stopVoiceRecording();
     setTimerActive(false);
+    setIsEvaluating(true);
+    setSystemAlert('Gemini AI is verifying your response...');
+
+    try {
+      const token = localStorage.getItem('camsense_token') || 'demo_token_active';
+      const response = await fetch('/api/interview/evaluate-answer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
+          questionIndex: currentIdx,
+          candidateAnswer: userTranscript,
+          question: questions[currentIdx]?.questionText,
+          category: questions[currentIdx]?.category,
+          role: selectedRole
+        })
+      });
+
+      const resJson = await response.json();
+      if (resJson.success && resJson.data) {
+        setSystemAlert(`Gemini Verdict: ${resJson.data.verdict} (${resJson.data.score}/10). ${resJson.data.feedback}`);
+        // Allow user to read the verification for 4 seconds
+        await new Promise(resolve => setTimeout(resolve, 4000));
+      }
+    } catch (err) {
+      console.warn('Evaluation failed:', err);
+    }
+
+    setIsEvaluating(false);
 
     // Save answer to global context
     const currentAnswers = [...(globalState.userAnswers || [])];
-    currentAnswers[currentIdx] = userTranscript || "Candidate provided technical context and architecture validation parameters.";
+    currentAnswers[currentIdx] = userTranscript;
     
     setGlobalState(prev => ({
       ...prev,
@@ -314,7 +354,28 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   const strokeDashoffset = 282.6 - (282.6 * timeLeft) / 60;
 
   return (
-    <div className="max-w-6xl mx-auto py-4 space-y-6">
+    <div className="max-w-6xl mx-auto py-4 space-y-6 relative">
+      
+      {!hasStarted && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-slate-950/80 rounded-2xl border border-indigo-500/20">
+          <div className="bg-slate-900 border border-indigo-500/30 p-12 rounded-3xl flex flex-col items-center justify-center text-center space-y-6 max-w-2xl shadow-2xl">
+            <div className="w-20 h-20 rounded-full bg-indigo-900/40 border border-indigo-500/50 flex items-center justify-center text-indigo-400 mb-2 shadow-[0_0_40px_rgba(99,102,241,0.3)]">
+              <Play className="w-10 h-10 ml-2" />
+            </div>
+            <h2 className="text-3xl font-outfit font-bold text-white">Ready for your Mock Interview?</h2>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Your webcam and microphone have been initialized in the background. The Synthetic Recruiter will ask you personalized questions based on your resume. You must answer each question to proceed.
+            </p>
+            <button
+              onClick={() => setHasStarted(true)}
+              className="mt-4 px-10 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold font-outfit uppercase tracking-wider transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] hover:shadow-[0_0_40px_rgba(79,70,229,0.5)] flex items-center space-x-3"
+            >
+              <span>Begin Session</span>
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* Session Progress Header */}
       <div className="glass-panel p-4 rounded-xl flex items-center justify-between border-indigo-950/40">
@@ -414,16 +475,16 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
                 <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-indigo-500/40"></div>
               </div>
 
-              {cameraActive ? (
-                <video 
-                  ref={videoRef} 
-                  autoPlay 
-                  playsInline 
-                  muted 
-                  className="w-full h-full object-cover grayscale brightness-90 contrast-110 z-10" 
-                />
-              ) : (
-                <div className="text-center p-4 space-y-3 z-10">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted 
+                className={`w-full h-full object-cover z-10 ${cameraActive ? 'brightness-105' : 'hidden'}`} 
+              />
+              
+              {!cameraActive && (
+                <div className="text-center p-4 space-y-3 z-10 absolute inset-0 flex flex-col items-center justify-center bg-slate-950">
                   <div className="w-10 h-10 rounded-full bg-indigo-950/40 border border-indigo-500/30 flex items-center justify-center mx-auto text-indigo-400">
                     <Camera className="w-5 h-5 animate-pulse" />
                   </div>
@@ -522,9 +583,9 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
             <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
               <button
                 onClick={toggleRecording}
-                disabled={isAiSpeaking}
+                disabled={isAiSpeaking || isEvaluating}
                 className={`px-5 py-3 rounded-xl font-bold font-outfit text-xs tracking-wider uppercase transition-all duration-300 flex items-center space-x-2 ${
-                  isAiSpeaking
+                  (isAiSpeaking || isEvaluating)
                     ? 'bg-slate-900 border border-indigo-950/40 text-slate-600 cursor-not-allowed'
                     : isRecording
                     ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/10'
@@ -547,9 +608,9 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
               <div className="flex items-center space-x-2">
                 <button
                   onClick={handleRequestFollowUp}
-                  disabled={!userTranscript || isAiSpeaking}
+                  disabled={!userTranscript || isAiSpeaking || isEvaluating}
                   className={`px-4 py-3 rounded-xl border text-xs font-bold font-outfit uppercase tracking-wider transition-all flex items-center space-x-1.5 ${
-                    !userTranscript || isAiSpeaking
+                    !userTranscript || isAiSpeaking || isEvaluating
                       ? 'border-indigo-950/20 text-slate-700 cursor-not-allowed'
                       : 'border-cyan-500/20 text-cyan-400 hover:bg-cyan-950/20 shadow shadow-cyan-950/20'
                   }`}
@@ -561,17 +622,26 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
 
                 <button
                   onClick={handleAnswerSubmit}
-                  disabled={isAiSpeaking}
+                  disabled={isAiSpeaking || isEvaluating}
                   className={`px-6 py-3 rounded-xl font-bold font-outfit text-xs tracking-wider uppercase transition-all flex items-center space-x-1.5 ${
-                    isAiSpeaking
+                    (isAiSpeaking || isEvaluating)
                       ? 'bg-slate-900 text-slate-600 cursor-not-allowed border border-indigo-950/40'
                       : 'bg-white hover:bg-slate-100 text-slate-950 shadow-md shadow-white/5'
                   }`}
                 >
-                  <span>
-                    {currentIdx < questions.length - 1 ? 'Save & Proceed' : 'Go to Coding IDE'}
-                  </span>
-                  <ChevronRight className="w-4 h-4" />
+                  {isEvaluating ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>
+                        {currentIdx < questions.length - 1 ? 'Save & Proceed' : 'Go to Coding IDE'}
+                      </span>
+                      <ChevronRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </div>
             </div>

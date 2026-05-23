@@ -4,6 +4,7 @@
   "description": "AI Interview Platform with mock interviews, coding tests, and detailed reports",
   "scripts": {
     "start": "node server/server.js",
+    "preserver": "npx kill-port 5000",
     "server": "nodemon server/server.js",
     "client": "npm run dev --prefix client"
   },

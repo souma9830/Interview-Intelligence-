@@ -1,7 +1,8 @@
 const Report = require('../models/Report');
 const Interview = require('../models/Interview');
+const { synthesizeInterviewReport } = require('../services/geminiService');
 
-// @desc    Synthesize and retrieve detailed performance report
+// @desc    Synthesize and retrieve detailed performance report using Gemini AI
 // @route   POST /api/report/synthesize
 // @access  Private
 exports.synthesizeReport = async (req, res) => {
@@ -18,136 +19,80 @@ exports.synthesizeReport = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Interview session not found' });
     }
 
-    console.log(`[Report Synthesizer] Analyzing candidate answers for session: ${interviewId}`);
+    console.log(`[Report Synthesizer] Calling Gemini to evaluate full transcript for session: ${interviewId}`);
 
-    // Dynamic heuristic evaluation of candidate transcripts
-    let totalWordCount = 0;
-    let techKeywordsMatched = 0;
-    let commKeywordsMatched = 0;
-    const answersText = (interview.questions || []).map(q => q.candidateAnswer || '').join(' ');
-    
-    if (answersText) {
-      totalWordCount = answersText.split(' ').length;
-      
-      const techKeywords = ['complexity', 'cache', 'scalable', 'o(1)', 'o(n)', 'memory', 'architecture', 'database', 'performance', 'latency'];
-      techKeywords.forEach(kw => {
-        if (answersText.toLowerCase().includes(kw)) techKeywordsMatched++;
-      });
+    // Build Q&A list for Gemini - only include answered questions
+    const qaList = (interview.questions || []).filter(q => q.candidateAnswer && q.candidateAnswer.trim()).map(q => ({
+      questionText: q.questionText,
+      candidateAnswer: q.candidateAnswer,
+      category: q.category || 'technical'
+    }));
 
-      const commKeywords = ['clearly', 'approach', 'structure', 'explain', 'design', 'collaborate', 'communication', 'team'];
-      commKeywords.forEach(kw => {
-        if (answersText.toLowerCase().includes(kw)) commKeywordsMatched++;
-      });
-    }
+    // If no answers recorded, use all questions with empty answers
+    const transcript = qaList.length > 0 ? qaList : (interview.questions || []).map(q => ({
+      questionText: q.questionText,
+      candidateAnswer: q.candidateAnswer || '(No answer provided)',
+      category: q.category || 'technical'
+    }));
 
-    // Calculate dynamic scores based on word depth and keyword overlaps
-    let communicationScore = 75;
-    if (totalWordCount > 100) communicationScore += 10;
-    if (totalWordCount > 250) communicationScore += 5;
-    communicationScore += Math.min(commKeywordsMatched * 3, 10);
-    if (communicationScore > 100) communicationScore = 100;
+    // Get Gemini-powered evaluation
+    const aiReport = await synthesizeInterviewReport({
+      role: interview.role,
+      experience: interview.experience,
+      qaList: transcript
+    });
 
-    let technicalScore = 70;
-    if (totalWordCount > 120) technicalScore += 10;
-    technicalScore += Math.min(techKeywordsMatched * 4, 15);
-    if (technicalScore > 100) technicalScore = 100;
-
-    // Advanced dynamic scoring breakdown maps
     const breakdown = {
-      syntaxAccuracy: Math.round(technicalScore * 0.95),
-      systemScalability: Math.round(technicalScore * 0.9),
-      verbalCommunication: communicationScore,
-      complexityOptimization: Math.round(technicalScore * 0.93)
+      syntaxAccuracy: aiReport.breakdown?.technicalDepth || aiReport.technicalScore,
+      systemScalability: aiReport.breakdown?.problemSolvingApproach || Math.round(aiReport.technicalScore * 0.9),
+      verbalCommunication: aiReport.breakdown?.communicationClarity || aiReport.communicationScore,
+      complexityOptimization: aiReport.breakdown?.domainKnowledge || Math.round(aiReport.technicalScore * 0.95),
     };
 
-    const overallScore = Math.round((technicalScore + communicationScore) / 2);
-
-    // Formulate tailored strengths and weaknesses
-    const strengths = [];
-    const weaknesses = [];
-
-    if (communicationScore > 85) {
-      strengths.push('Excellent verbal layout of system concepts and structured descriptions.');
-      strengths.push('Articulate response patterns keeping cognitive load minimal.');
-    } else {
-      strengths.push('Competent overview of targeted system modules.');
-      weaknesses.push('Could expand speaking descriptions to outline high-level diagrams.');
-    }
-
-    if (technicalScore > 80) {
-      strengths.push('Demonstrates solid proficiency in algorithmic complexity bounds (O(1)/O(N)).');
-      strengths.push('Keeps system memory, latency bottlenecks, and database locking strategies top of mind.');
-    } else {
-      weaknesses.push('Verify complexity bounds (Big O scaling metrics) before code implementation.');
-    }
-
-    if (totalWordCount < 50) {
-      weaknesses.push('Speaking response length is brief. Aim to elaborate on specific structural scenarios.');
-    }
-
-    if (strengths.length === 0) strengths.push('Clear understanding of targeted development frameworks.');
-    if (weaknesses.length === 0) weaknesses.push('Review deep multi-threaded performance constraints under large concurrency loads.');
-
     const feedbackLogs = [
-      `Completed comprehensive automated AI performance synthesis for role: ${interview.role}.`,
-      `Final composite evaluation score processed: ${overallScore}%.`,
-      `Communication matrices: ${communicationScore}%. Technical matrices: ${technicalScore}%.`
+      `Gemini AI completed comprehensive interview evaluation for role: ${interview.role}.`,
+      `Overall score: ${aiReport.overallScore}% | Technical: ${aiReport.technicalScore}% | Communication: ${aiReport.communicationScore}%`,
+      `Hiring Recommendation: ${aiReport.hiringRecommendation || 'See full report'}`,
     ];
 
-    // Generate markdown feedback report
-    const feedbackReport = `### AI INTERVIEW FEEDBACK REPORT
-    
-**Candidate Role:** ${interview.role}
-**Experience Profile:** ${interview.experience}
-**Overall Synthesis Score:** ${overallScore}%
-
----
-
-#### 🌟 PRIMARY STRENGTHS
-${strengths.map(s => `- ${s}`).join('\n')}
-
-#### 🔧 SUGGESTED IMPROVEMENT PATHS
-${weaknesses.map(w => `- ${w}`).join('\n')}
-
-#### 📝 CONCRETE VERDICT
-The candidate displays strong fundamental alignment for the ${interview.role} position. By optimizing structural complexity limits and expanding speech descriptors, they will maximize high-load production scaling capabilities.`;
-
-    // Check if report already exists for this interview
+    // Check if report already exists
     let report = await Report.findOne({ interview: interviewId });
     if (!report) {
       report = await Report.create({
         user: userId,
         interview: interviewId,
-        overallScore,
-        communicationScore,
-        technicalScore,
+        overallScore: aiReport.overallScore,
+        communicationScore: aiReport.communicationScore,
+        technicalScore: aiReport.technicalScore,
         breakdown,
-        strengths,
-        weaknesses,
-        feedbackReport,
+        strengths: aiReport.strengths || [],
+        weaknesses: aiReport.weaknesses || [],
+        feedbackReport: aiReport.feedbackReport || 'No detailed feedback available.',
         feedbackLogs,
       });
     } else {
-      // Overwrite/Update existing for interactive iteration
-      report.overallScore = overallScore;
-      report.communicationScore = communicationScore;
-      report.technicalScore = technicalScore;
+      report.overallScore = aiReport.overallScore;
+      report.communicationScore = aiReport.communicationScore;
+      report.technicalScore = aiReport.technicalScore;
       report.breakdown = breakdown;
-      report.strengths = strengths;
-      report.weaknesses = weaknesses;
-      report.feedbackReport = feedbackReport;
+      report.strengths = aiReport.strengths || [];
+      report.weaknesses = aiReport.weaknesses || [];
+      report.feedbackReport = aiReport.feedbackReport || 'No detailed feedback available.';
       report.feedbackLogs = feedbackLogs;
       await report.save();
     }
 
-    // Update interview status to completed
     interview.status = 'completed';
     await interview.save();
 
     res.status(201).json({
       success: true,
-      message: 'Report synthesized successfully via dynamic AI evaluation system',
-      data: report,
+      message: 'Gemini AI report synthesized successfully',
+      data: {
+        ...report.toObject(),
+        hiringRecommendation: aiReport.hiringRecommendation || 'Hire',
+        hrScore: aiReport.hrScore || aiReport.communicationScore,
+      },
     });
   } catch (error) {
     console.error('Report Synthesis Error:', error.message);

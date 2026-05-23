@@ -20,6 +20,7 @@ router.post('/answer', protect, interviewController.submitAnswer);
 router.post('/follow-up', protect, interviewController.submitAnswerAndGenerateFollowUp);
 router.post('/questions', protect, questionController.generateQuestion);
 router.post('/coding/eval', protect, interviewController.evaluateCode);
+router.post('/evaluate-answer', protect, interviewController.evaluateAnswerRealtime);
 
 // New Resume Analysis route matching PDF file buffers and Job Descriptions
 router.post('/analyze-resume', protect, upload.single('resume'), interviewController.analyzeResumeAndMatchSkills);
