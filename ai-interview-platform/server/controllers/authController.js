@@ -84,6 +84,53 @@ exports.login = async (req, res) => {
   }
 };
 
+// @desc    Firebase Auth Bridge (Google/Email)
+// @route   POST /api/auth/firebase
+// @access  Public
+exports.firebaseAuth = async (req, res) => {
+  try {
+    const { email, name, uid } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required from Firebase' });
+    }
+
+    // Find if user already exists
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // If the user doesn't exist, create them. We use a dummy password since Firebase handles auth.
+      // Or we can generate a random secure string.
+      const dummyPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+      user = await User.create({
+        name: name || 'User',
+        email,
+        password: dummyPassword, // Bypass normal auth
+      });
+    } else {
+      // If they exist but logged in via Google/Firebase with a different name, update it
+      if (name && user.name !== name && name !== email.split('@')[0]) {
+        user.name = name;
+        await user.save();
+      }
+    }
+
+    // Issue our standard camsense_token JWT so the rest of the application works flawlessly
+    res.json({
+      success: true,
+      data: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        token: generateToken(user._id),
+      },
+    });
+  } catch (error) {
+    console.error('Firebase Auth Error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get current user details
 // @route   GET /api/auth/me
 // @access  Private

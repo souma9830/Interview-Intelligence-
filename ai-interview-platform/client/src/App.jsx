@@ -36,10 +36,10 @@ export default function App() {
       fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
         .then(d => {
-          if (d.success && d.data) { setUser(d.data); if (currentTab === 'login' || currentTab === 'signup') setCurrentTab('home'); }
-          else { localStorage.removeItem('camsense_token'); setToken(''); setCurrentTab('login'); }
+          if (d.success && d.data) { setUser(d.data); if (currentTab === 'login' || currentTab === 'signup' || currentTab === 'landing') setCurrentTab('home'); }
+          else { localStorage.removeItem('camsense_token'); setToken(''); setCurrentTab('landing'); }
         })
-        .catch(() => { localStorage.removeItem('camsense_token'); setToken(''); setCurrentTab('login'); })
+        .catch(() => { localStorage.removeItem('camsense_token'); setToken(''); setCurrentTab('landing'); })
         .finally(() => setCheckingAuth(false));
     } else {
       setCheckingAuth(false);
@@ -50,7 +50,7 @@ export default function App() {
   const handleLogout = async () => {
     try { await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }); } catch {}
     localStorage.removeItem('camsense_token');
-    setToken(''); setUser(null); setCurrentTab('login');
+    setToken(''); setUser(null); setCurrentTab('landing');
   };
 
   const renderContent = () => {

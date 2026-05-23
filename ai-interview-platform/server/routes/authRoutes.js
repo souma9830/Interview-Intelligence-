@@ -5,6 +5,7 @@ const { protect } = require('../middleware/authMiddleware');
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/firebase', authController.firebaseAuth);
 router.get('/me', protect, authController.getMe);
 router.post('/logout', protect, authController.logout);
 
