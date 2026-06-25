@@ -1,11 +1,14 @@
 const express = require('express');
 const cors = require('cors');
+const requestLogger = require('./middleware/requestLogger');
 const authRoutes = require('./routes/authRoutes');
 const interviewRoutes = require('./routes/interviewRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
 
 const app = express();
+
+app.use(requestLogger);
 
 app.use(cors());
 app.use(express.json());
