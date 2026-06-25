@@ -34,6 +34,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   const [hasStarted, setHasStarted] = useState(false);
   const [isCheatWarningVisible, setIsCheatWarningVisible] = useState(false);
 
+  const streamRef = useRef(null);
   const videoRef = useRef(null);
   const [cameraActive, setCameraActive] = useState(false);
   const recognitionRef = useRef(null);
@@ -60,6 +61,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+      streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setCameraActive(true);
@@ -71,6 +73,9 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
 
   useEffect(() => {
     return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
       if (videoRef.current && videoRef.current.srcObject) {
         videoRef.current.srcObject.getTracks().forEach(t => t.stop());
       }
@@ -271,6 +276,9 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
       setUserTranscript('');
       setTimeLeft(60);
     } else {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
       if (videoRef.current && videoRef.current.srcObject) {
         videoRef.current.srcObject.getTracks().forEach(t => t.stop());
       }
