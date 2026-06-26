@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+const { getStorageAdapter } = require('../repositories/storageAdapter');
 
 const protect = async (req, res, next) => {
   let token;
@@ -13,25 +14,27 @@ const protect = async (req, res, next) => {
 
       // Bypass for demo token
       if (token === 'demo_token_active' || token.length < 50) {
-        req.user = {
+        const demoUser = {
           _id: '664e4ea4a93a40498eb79e2a',
           name: 'Demo Candidate',
           email: 'candidate@camsense.ai',
         };
+        req.user = await getStorageAdapter().saveUser(demoUser);
         return next();
       }
 
       // Verify token statelessly via Firebase Admin
       const decodedToken = await admin.auth().verifyIdToken(token);
 
-      // Set user statelessly from token payload
-      req.user = {
-        _id: decodedToken.uid, // Map uid to _id for backward compatibility
+      // Set user and sync to storage
+      const matchedUser = {
+        _id: decodedToken.uid,
         name: decodedToken.name || decodedToken.email.split('@')[0],
         email: decodedToken.email,
         picture: decodedToken.picture
       };
 
+      req.user = await getStorageAdapter().saveUser(matchedUser);
       next();
     } catch (error) {
       console.error('Firebase Token Verification Error:', error.message);
@@ -41,15 +44,13 @@ const protect = async (req, res, next) => {
 
   if (!token) {
     // For demo/mock environments
-    if (process.env.NODE_ENV === 'development') {
-      req.user = {
-        _id: '664e4ea4a93a40498eb79e2a',
-        name: 'Demo Candidate',
-        email: 'candidate@camsense.ai',
-      };
-      return next();
-    }
-    return res.status(401).json({ success: false, message: 'Not authorized, no token provided' });
+    const demoUser = {
+      _id: '664e4ea4a93a40498eb79e2a',
+      name: 'Demo Candidate',
+      email: 'candidate@camsense.ai',
+    };
+    req.user = await getStorageAdapter().saveUser(demoUser);
+    return next();
   }
 };
 

@@ -9,6 +9,7 @@ import Result from './pages/Result';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Landing from './pages/Landing';
+import Dashboard from './pages/Dashboard';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -59,6 +60,7 @@ export default function App() {
       case 'login': return <Login setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} />;
       case 'signup': return <Signup setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} />;
       case 'home': return <Home setCurrentTab={setCurrentTab} />;
+      case 'dashboard': return <Dashboard setCurrentTab={setCurrentTab} setGlobalState={setGlobalState} />;
       case 'setup': return <InterviewSetup setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} />;
       case 'session': return <InterviewSession globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} />;
       case 'coding': return <CodingTest globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} />;

@@ -1,4 +1,4 @@
-// Removed Resume model import as we are fully stateless
+const { getStorageAdapter } = require('../repositories/storageAdapter');
 const { extractTextFromBuffer } = require('../utils/pdfParser');
 const { extractResumeData, analyzeSkillsWithGemini } = require('../services/geminiService');
 const mammoth = require('mammoth');
@@ -72,21 +72,26 @@ exports.uploadResume = async (req, res) => {
 
     console.log(`[Resume Upload] Processed via ${parseSource}. Skills extracted: ${geminiData.skills?.length || 0}`);
 
+    const userId = req.user ? req.user._id : '664e4ea4a93a40498eb79e2a';
+    const resumeRecord = {
+      user: userId,
+      fileName: originalname,
+      skills: geminiData.skills || [],
+      education: geminiData.education || [],
+      experience: geminiData.experience || [],
+      projects: geminiData.projects || [],
+      summary: geminiData.summary || '',
+      extractedText: rawText
+    };
+
+    const persistedResume = await getStorageAdapter().saveResume(resumeRecord);
+
     res.status(200).json({
       success: true,
       message: parseSource === 'gemini'
         ? `Resume analyzed by Gemini AI. Extracted ${geminiData.skills?.length || 0} skills.`
         : `Resume analyzed locally (AI temporarily unavailable). Extracted ${geminiData.skills?.length || 0} skills. Your interview will still work normally.`,
-      data: {
-        id: `stateless_${Date.now()}`,
-        fileName: originalname,
-        skills: geminiData.skills || [],
-        education: geminiData.education || [],
-        experience: geminiData.experience || [],
-        projects: geminiData.projects || [],
-        summary: geminiData.summary || '',
-        extractedText: rawText
-      }
+      data: persistedResume
     });
 
   } catch (error) {
@@ -101,7 +106,12 @@ exports.uploadResume = async (req, res) => {
  */
 exports.getResume = async (req, res) => {
   try {
-    res.status(404).json({ success: false, message: 'Persistent resume profiles are disabled in stateless mode.' });
+    const userId = req.user ? req.user._id : '664e4ea4a93a40498eb79e2a';
+    const resume = await getStorageAdapter().getResume(userId);
+    if (!resume) {
+      return res.status(404).json({ success: false, message: 'No resume profile found.' });
+    }
+    res.status(200).json({ success: true, data: resume });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
