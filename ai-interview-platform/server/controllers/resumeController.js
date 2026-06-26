@@ -1,5 +1,5 @@
-const { getStorageAdapter } = require('../repositories/storageAdapter');
-const { extractTextFromBuffer } = require('../utils/pdfParser');
+// Removed Resume model import as we are fully stateless
+const { extractTextFromPDF } = require('../utils/pdfParser');
 const { extractResumeData, analyzeSkillsWithGemini } = require('../services/geminiService');
 const mammoth = require('mammoth');
 const path = require('path');
@@ -19,12 +19,10 @@ exports.uploadResume = async (req, res) => {
     const { originalname, buffer, mimetype } = req.file;
     console.log(`[Resume Upload] Received: ${originalname} (${mimetype})`);
 
-    // Step 1: Extract raw text from PDF or DOCX
+    // Step 1: Extract raw text from PDF or DOCX using the shared utility
     let rawText = '';
     if (mimetype === 'application/pdf' || originalname.endsWith('.pdf')) {
-      const pdfParse = require('pdf-parse');
-      const pdfData = await pdfParse(buffer);
-      rawText = pdfData.text;
+      rawText = await extractTextFromPDF(buffer);
     } else if (
       mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
       originalname.endsWith('.docx')
@@ -72,26 +70,21 @@ exports.uploadResume = async (req, res) => {
 
     console.log(`[Resume Upload] Processed via ${parseSource}. Skills extracted: ${geminiData.skills?.length || 0}`);
 
-    const userId = req.user ? req.user._id : '664e4ea4a93a40498eb79e2a';
-    const resumeRecord = {
-      user: userId,
-      fileName: originalname,
-      skills: geminiData.skills || [],
-      education: geminiData.education || [],
-      experience: geminiData.experience || [],
-      projects: geminiData.projects || [],
-      summary: geminiData.summary || '',
-      extractedText: rawText
-    };
-
-    const persistedResume = await getStorageAdapter().saveResume(resumeRecord);
-
     res.status(200).json({
       success: true,
       message: parseSource === 'gemini'
         ? `Resume analyzed by Gemini AI. Extracted ${geminiData.skills?.length || 0} skills.`
         : `Resume analyzed locally (AI temporarily unavailable). Extracted ${geminiData.skills?.length || 0} skills. Your interview will still work normally.`,
-      data: persistedResume
+      data: {
+        id: `stateless_${Date.now()}`,
+        fileName: originalname,
+        skills: geminiData.skills || [],
+        education: geminiData.education || [],
+        experience: geminiData.experience || [],
+        projects: geminiData.projects || [],
+        summary: geminiData.summary || '',
+        extractedText: rawText
+      }
     });
 
   } catch (error) {
@@ -106,12 +99,7 @@ exports.uploadResume = async (req, res) => {
  */
 exports.getResume = async (req, res) => {
   try {
-    const userId = req.user ? req.user._id : '664e4ea4a93a40498eb79e2a';
-    const resume = await getStorageAdapter().getResume(userId);
-    if (!resume) {
-      return res.status(404).json({ success: false, message: 'No resume profile found.' });
-    }
-    res.status(200).json({ success: true, data: resume });
+    res.status(404).json({ success: false, message: 'Persistent resume profiles are disabled in stateless mode.' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
