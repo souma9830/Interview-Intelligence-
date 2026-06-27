@@ -1,5 +1,5 @@
 const pdfParse = require('pdf-parse');
-const { parserCache } = require('./cacheManager');
+const { parserCache } = require('../services/cache/cacheManager');
 const crypto = require('crypto');
 
 /**

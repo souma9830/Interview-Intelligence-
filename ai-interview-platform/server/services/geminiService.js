@@ -1,5 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { llmCache } = require('../utils/cacheManager');
+const { llmCache } = require('../services/cache/cacheManager');
 
 const getModel = () => {
   const apiKey = process.env.GEMINI_API_KEY;

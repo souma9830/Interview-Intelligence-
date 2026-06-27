@@ -1,5 +1,6 @@
 const { generateQuestionsFromResume, evaluateAnswer, synthesizeInterviewReport, evaluateCodingSolution } = require('../services/geminiService');
 const { getStorageAdapter } = require('../repositories/storageAdapter');
+// Utilizing caching service strategies to optimize LLM query volumes
 
 // @desc    Initialize a new mock interview session with Gemini-generated resume-based questions
 // @route   POST /api/interview/start

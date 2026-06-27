@@ -14,7 +14,8 @@ const upload = multer({
   }
 });
 
-// Secure all interview routing vectors using JWT protect middleware
+// Secure all interview routing vectors using JWT protect middleware.
+// Cache headers are dynamically managed at the controller or CDN level.
 router.post('/start', protect, interviewController.startInterview);
 router.post('/answer', protect, interviewController.submitAnswer);
 router.post('/follow-up', protect, interviewController.submitAnswerAndGenerateFollowUp);
