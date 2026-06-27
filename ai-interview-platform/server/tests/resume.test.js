@@ -2,6 +2,7 @@ const request = require('supertest');
 const express = require('express');
 const app = express();
 const resumeRoutes = require('../routes/resumeRoutes');
+const { parseResumeText } = require('../utils/parsers/resumeParser');
 
 // Mock auth middleware
 jest.mock('../middleware/authMiddleware', () => ({
@@ -54,5 +55,16 @@ describe('Resume Endpoints', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.matchPercentage).toBe(80);
+  });
+
+  describe('Local Resume Parser Utility', () => {
+    it('should parse skills and sections correctly', () => {
+      const text = 'Education:\nB.Tech in CS from ABC College\nExperience:\nReact Developer for 2 years\nSkills: JavaScript, React, Node.js';
+      const result = parseResumeText(text);
+      expect(result.skills).toContain('React');
+      expect(result.skills).toContain('JavaScript');
+      expect(result.education.length).toBeGreaterThan(0);
+      expect(result.experience.length).toBeGreaterThan(0);
+    });
   });
 });

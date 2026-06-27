@@ -8,8 +8,9 @@ const { uploadResume, getResume, analyzeJobDescription } = require('../controlle
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // Max 10MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // Max 10MB upload limit to prevent Denial of Service (DoS)
   fileFilter: (req, file, cb) => {
+    // Only accept standard high-fidelity CV formats
     const filetypes = /pdf|docx/;
     const mimetype = file.mimetype;
     const extname = file.originalname.split('.').pop().toLowerCase();

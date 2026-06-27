@@ -47,7 +47,7 @@ exports.uploadResume = async (req, res) => {
       geminiData = await extractResumeData(rawText);
     } catch (geminiErr) {
       console.warn(`[Resume Upload] Gemini unavailable (${geminiErr.message}). Falling back to local parser...`);
-      const { parseResumeText } = require('../utils/resumeParser');
+      const { parseResumeText } = require('../utils/parsers/resumeParser');
       const localData = parseResumeText(rawText);
       geminiData = {
         skills: localData.skills || [],
@@ -129,7 +129,7 @@ exports.analyzeJobDescription = async (req, res) => {
       analysisResult = await analyzeSkillsWithGemini(resumeContent, jobDescription);
     } catch (geminiErr) {
       console.warn(`[JD Analysis] Gemini unavailable (${geminiErr.message}). Using local skill matching...`);
-      const { parseResumeText } = require('../utils/resumeParser');
+      const { parseResumeText } = require('../utils/parsers/resumeParser');
       const resumeData = parseResumeText(resumeContent);
       const jdLower = jobDescription.toLowerCase();
       const matching = resumeData.skills.filter(s => jdLower.includes(s.toLowerCase()));

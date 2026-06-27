@@ -28,7 +28,7 @@ const extractTextFromPDF = async (buffer) => {
     textContent = textContent.replace(/\s+/g, ' ').trim();
 
     if (textContent.length === 0) {
-      console.warn('PDF parsed successfully but returned zero character claims (possible image-only PDF)');
+      console.warn('[PDF Parser] Extracted content from PDF successfully, but length was zero (scan/image-only PDF likely)');
       return 'Image/Scan-only Resume Document';
     }
 
