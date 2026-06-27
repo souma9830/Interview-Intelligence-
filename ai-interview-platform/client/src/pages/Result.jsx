@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Award, Download, CheckCircle, RefreshCw, Sparkles, BookOpen, ThumbsUp, HelpCircle, AlertCircle } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import { synthesizeReport as apiSynthesizeReport } from '../services/ai/aiService';
 
 export default function Result({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
@@ -15,21 +16,13 @@ export default function Result({ globalState, setGlobalState, setCurrentTab }) {
   const synthesizeReport = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/report/synthesize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer demo_token_active'
-        },
-        body: JSON.stringify({ 
-          interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
-          role: selectedRole,
-          experience: experience,
-          questions: globalState.interviewQuestions || [],
-          answers: globalState.userAnswers || []
-        })
+      const resJson = await apiSynthesizeReport({ 
+        interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
+        role: selectedRole,
+        experience: experience,
+        questions: globalState.interviewQuestions || [],
+        answers: globalState.userAnswers || []
       });
-      const resJson = await response.json();
       if (resJson.success && resJson.data) {
         let data = resJson.data;
         const violations = globalState.violationCount || 0;

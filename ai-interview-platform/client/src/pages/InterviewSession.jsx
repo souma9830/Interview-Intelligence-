@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Video, Camera, Play, AlertTriangle } from 'lucide-react';
 import VideoRecorder from '../components/Telemetry/VideoRecorder';
+import { evaluateAnswerRealtime as apiEvaluateAnswerRealtime, submitAnswerAndGenerateFollowUp as apiSubmitAnswerAndGenerateFollowUp } from '../services/ai/aiService';
 
 export default function InterviewSession({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
@@ -230,12 +231,12 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     stopVoiceRecording(); setTimerActive(false);
     setSystemAlert('Generating follow-up question…');
     try {
-      const res = await fetch('/api/interview/follow-up', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer demo_token_active' },
-        body: JSON.stringify({ interviewId: interviewId === 'demo_session_active' ? undefined : interviewId, questionIndex: currentIdx, candidateAnswer: userTranscript }),
+      const json = await apiSubmitAnswerAndGenerateFollowUp({
+        interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
+        questionIndex: currentIdx,
+        candidateAnswer: userTranscript,
+        role: selectedRole
       });
-      const json = await res.json();
       if (json.success && json.data) {
         const updated = [...questions];
         updated.splice(currentIdx + 1, 0, { questionText: json.data.followUpQuestion, category: questions[currentIdx].category });
@@ -269,13 +270,14 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     let answerScore = 0;
     try {
       if (text) {
-        const token = localStorage.getItem('camsense_token') || 'demo_token_active';
-        const res = await fetch('/api/interview/evaluate-answer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ interviewId: interviewId === 'demo_session_active' ? undefined : interviewId, questionIndex: currentIdx, candidateAnswer: text, question: questions[currentIdx]?.questionText, category: questions[currentIdx]?.category, role: selectedRole }),
+        const json = await apiEvaluateAnswerRealtime({
+          interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
+          questionIndex: currentIdx,
+          candidateAnswer: text,
+          question: questions[currentIdx]?.questionText,
+          category: questions[currentIdx]?.category,
+          role: selectedRole
         });
-        const json = await res.json();
         if (json.success && json.data) {
           const parsed = Number(json.data.score);
           answerScore = Number.isFinite(parsed) ? parsed : 0;

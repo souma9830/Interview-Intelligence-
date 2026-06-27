@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Sparkles, Code, Compass, AlertCircle, GraduationCap, FileText } from 'lucide-react';
+import { analyzeJobDescription as apiAnalyzeJobDescription, uploadResume as apiUploadResume } from '../services/ai/aiService';
 
 const S = {
   card: { background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -66,15 +67,10 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
     try {
       const token = localStorage.getItem('camsense_token');
       if (!token) { setErrorMessage('Session expired. Sign in again.'); setIsAnalyzing(false); return; }
-      const response = await fetch('/api/resume/analyze-jd', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ 
-          jobDescription,
-          resumeContent: parsedProfile?.extractedText || parsedProfile?.skills?.join(', ') || ''
-        }),
+      const resJson = await apiAnalyzeJobDescription({ 
+        jobDescription,
+        resumeContent: parsedProfile?.extractedText || parsedProfile?.skills?.join(', ') || ''
       });
-      const resJson = await response.json();
       if (resJson.success && resJson.data) { setMatchData(resJson.data); }
       else { setErrorMessage(resJson.message || 'Failed to analyze requirements.'); }
     } catch {
@@ -120,14 +116,9 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
       const interval = setInterval(() => {
         setUploadProgress(p => p >= 90 ? 90 : p + 15);
       }, 250);
-      const res = await fetch('/api/resume/upload', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+      const json = await apiUploadResume(formData);
       clearInterval(interval);
       setUploadProgress(100);
-      const json = await res.json();
       if (json.success && json.data) {
         setTimeout(() => {
           setResumeUploaded(true);
