@@ -1,5 +1,5 @@
 // Removed Resume model import as we are fully stateless
-const { extractTextFromBuffer } = require('../utils/pdfParser');
+const { extractTextFromPDF } = require('../utils/pdfParser');
 const { extractResumeData, analyzeSkillsWithGemini } = require('../services/geminiService');
 const mammoth = require('mammoth');
 const path = require('path');
@@ -19,12 +19,10 @@ exports.uploadResume = async (req, res) => {
     const { originalname, buffer, mimetype } = req.file;
     console.log(`[Resume Upload] Received: ${originalname} (${mimetype})`);
 
-    // Step 1: Extract raw text from PDF or DOCX
+    // Step 1: Extract raw text from PDF or DOCX using the shared utility
     let rawText = '';
     if (mimetype === 'application/pdf' || originalname.endsWith('.pdf')) {
-      const pdfParse = require('pdf-parse');
-      const pdfData = await pdfParse(buffer);
-      rawText = pdfData.text;
+      rawText = await extractTextFromPDF(buffer);
     } else if (
       mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
       originalname.endsWith('.docx')

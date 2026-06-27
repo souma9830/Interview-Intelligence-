@@ -1,9 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Video, Camera, Play, AlertTriangle } from 'lucide-react';
+import VideoRecorder from '../components/Telemetry/VideoRecorder';
 
 export default function InterviewSession({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
   const interviewId = globalState.interviewId || 'demo_session_active';
+
+  // Initialize telemetry logs
+  useEffect(() => {
+    setGlobalState(prev => ({
+      ...prev,
+      telemetryLogs: [{ time: new Date().toLocaleTimeString(), event: 'Proctored session initialized' }]
+    }));
+  }, []);
+
 
   const [questions, setQuestions] = useState(() => {
     if (globalState.questions && globalState.questions.length > 0) {
@@ -34,6 +44,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   const [hasStarted, setHasStarted] = useState(false);
   const [isCheatWarningVisible, setIsCheatWarningVisible] = useState(false);
 
+  const streamRef = useRef(null);
   const videoRef = useRef(null);
   const [cameraActive, setCameraActive] = useState(false);
   const recognitionRef = useRef(null);
@@ -60,6 +71,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+      streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setCameraActive(true);
@@ -71,6 +83,9 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
 
   useEffect(() => {
     return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
       if (videoRef.current && videoRef.current.srcObject) {
         videoRef.current.srcObject.getTracks().forEach(t => t.stop());
       }
@@ -95,7 +110,12 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
       if (window.simInterval) clearInterval(window.simInterval);
       setIsRecording(false);
       setTimerActive(false);
-      setGlobalState(prev => ({ ...prev, violationCount: (prev.violationCount || 0) + 1 }));
+      const timestamp = new Date().toLocaleTimeString();
+      setGlobalState(prev => ({
+        ...prev,
+        violationCount: (prev.violationCount || 0) + 1,
+        telemetryLogs: [...(prev.telemetryLogs || []), { time: timestamp, event: 'Fullscreen exited / tab switched (Violation)' }]
+      }));
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -113,7 +133,11 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     } catch (err) {
       console.warn("Fullscreen request failed", err);
     }
-    await startCamera();
+    const timestamp = new Date().toLocaleTimeString();
+    setGlobalState(prev => ({
+      ...prev,
+      telemetryLogs: [...(prev.telemetryLogs || []), { time: timestamp, event: 'Proctored session started' }]
+    }));
     setHasStarted(true);
   };
 
@@ -153,12 +177,18 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     rec.interimResults = true;
     rec.lang = 'en-US';
     rec.onstart = () => { setIsRecording(true); setSystemAlert('Listening…'); };
+    let debounceTimer;
     rec.onresult = e => {
       let final = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
         if (e.results[i].isFinal) final += e.results[i][0].transcript + ' ';
       }
-      if (final) setUserTranscript(prev => prev + final);
+      if (final) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          setUserTranscript(prev => prev + final);
+        }, 250);
+      }
     };
     rec.onerror = e => { if (e.error === 'not-allowed') simulateFallback(); };
     rec.onend = () => setIsRecording(false);
@@ -271,6 +301,9 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
       setUserTranscript('');
       setTimeLeft(60);
     } else {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
       if (videoRef.current && videoRef.current.srcObject) {
         videoRef.current.srcObject.getTracks().forEach(t => t.stop());
       }
@@ -357,37 +390,17 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
             </div>
           </div>
 
-          {/* Webcam */}
-          <div style={{ background: '#111', border: '1px solid #222', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Video size={14} color="#aaa" />
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#ccc', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Webcam Feed</span>
-              </div>
-              <span style={{ fontSize: '11px', fontWeight: '600', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} /> LIVE
-              </span>
-            </div>
-
-            <div style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '8px', overflow: 'hidden', background: '#0a0a0a', border: '1px solid #222' }}>
-              {/* Corner brackets */}
-              {[['top:6px','left:6px','borderTop','borderLeft'],['top:6px','right:6px','borderTop','borderRight'],['bottom:6px','left:6px','borderBottom','borderLeft'],['bottom:6px','right:6px','borderBottom','borderRight']].map(([t,s,b1,b2],i) => (
-                <div key={i} style={{ position:'absolute', width:'14px', height:'14px', ...(t.includes('top') ? {top:'6px'} : {bottom:'6px'}), ...(s.includes('left') ? {left:'6px'} : {right:'6px'}), [b1]: '1.5px solid #555', [b2]: '1.5px solid #555' }} />
-              ))}
-              <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', display: cameraActive ? 'block' : 'none' }} />
-              {!cameraActive && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                  <Camera size={24} color="#555" />
-                  <span style={{ fontSize: '12px', color: '#888' }}>Camera offline</span>
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#888', letterSpacing: '0.06em' }}>
-              <span>TELEMETRY: LOCKED</span>
-              <span>FOCUS: ACTIVE</span>
-            </div>
-          </div>
+          {/* Webcam / Telemetry Recorder */}
+          <VideoRecorder
+            isSessionActive={hasStarted}
+            onRecordingComplete={(videoUrl) => {
+              setGlobalState(prev => ({
+                ...prev,
+                recordedVideoUrl: videoUrl,
+                telemetryLogs: [...(prev.telemetryLogs || []), { time: new Date().toLocaleTimeString(), event: 'Proctored recording compiled successfully' }]
+              }));
+            }}
+          />
         </div>
 
         {/* RIGHT — Question + Transcript */}

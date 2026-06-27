@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { llmCache } = require('../utils/cacheManager');
 
 const getModel = () => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -35,6 +36,14 @@ const callGeminiWithRetry = async (model, promptContent, maxRetries = 3) => {
  * Uses Gemini to extract skills, education, experience and projects from raw resume text.
  */
 const extractResumeData = async (resumeText) => {
+  const crypto = require('crypto');
+  const cacheKey = `resume_${crypto.createHash('md5').update(resumeText).digest('hex')}`;
+  const cached = llmCache.get(cacheKey);
+  if (cached) {
+    console.log('[Cache] Returning cached structured resume profile.');
+    return cached;
+  }
+
   console.log('[Gemini] Extracting structured profile from resume text...');
   const model = getModel();
 
@@ -69,6 +78,7 @@ Rules:
 
   const data = JSON.parse(result.response.text());
   console.log(`[Gemini] Extracted ${data.skills?.length || 0} skills from resume.`);
+  llmCache.set(cacheKey, data);
   return data;
 };
 
@@ -77,6 +87,15 @@ Rules:
  * Uses Gemini to compare resume skills against JD requirements.
  */
 const analyzeSkillsWithGemini = async (resumeText, jobDescription) => {
+  const crypto = require('crypto');
+  const hashVal = `${resumeText}_${jobDescription}`;
+  const cacheKey = `jd_${crypto.createHash('md5').update(hashVal).digest('hex')}`;
+  const cached = llmCache.get(cacheKey);
+  if (cached) {
+    console.log('[Cache] Returning cached JD skill matching report.');
+    return cached;
+  }
+
   console.log('[Gemini] Analyzing JD match against resume...');
   const model = getModel();
 
@@ -119,7 +138,9 @@ Respond ONLY with a valid raw JSON object:
   data.matchPercentage = Math.min(Math.max(Number(data.matchPercentage) || 20, 10), 100);
 
   console.log(`[Gemini] JD match: ${data.matchPercentage}%, ${data.matchingSkills?.length} matching, ${data.missingSkills?.length} missing.`);
-  return { success: true, source: 'gemini-2.5-flash', ...data };
+  const outputData = { success: true, source: 'gemini-2.5-flash', ...data };
+  llmCache.set(cacheKey, outputData);
+  return outputData;
 };
 
 /**

@@ -1,4 +1,5 @@
 const { synthesizeInterviewReport } = require('../services/geminiService');
+const { getStorageAdapter } = require('../repositories/storageAdapter');
 
 // @desc    Synthesize and retrieve detailed performance report using Gemini AI
 // @route   POST /api/report/synthesize
@@ -39,7 +40,13 @@ exports.synthesizeReport = async (req, res) => {
       `Gemini AI completed comprehensive stateless evaluation.`
     ];
 
+    const userId = req.user ? req.user._id : '664e4ea4a93a40498eb79e2a';
+    const interviewIdVal = req.body.interviewId || `interview_${Date.now()}`;
+
     const reportData = {
+      user: userId,
+      interviewId: interviewIdVal,
+      interview: interviewIdVal,
       overallScore: aiReport.overallScore,
       communicationScore: aiReport.communicationScore,
       technicalScore: aiReport.technicalScore,
@@ -52,10 +59,12 @@ exports.synthesizeReport = async (req, res) => {
       hrScore: aiReport.hrScore || aiReport.communicationScore,
     };
 
+    const persistedReport = await getStorageAdapter().saveReport(reportData);
+
     res.status(201).json({
       success: true,
-      message: 'Gemini AI report synthesized successfully (stateless)',
-      data: reportData,
+      message: 'Gemini AI report synthesized and persisted successfully',
+      data: persistedReport,
     });
   } catch (error) {
     console.error('Report Synthesis Error:', error.message);
@@ -68,9 +77,28 @@ exports.synthesizeReport = async (req, res) => {
 // @access  Private
 exports.getReport = async (req, res) => {
   try {
-    res.status(404).json({ success: false, message: 'Persistent reports are disabled in stateless mode.' });
+    const { interviewId } = req.params;
+    const report = await getStorageAdapter().getReport(interviewId);
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Report not found.' });
+    }
+    res.status(200).json({ success: true, data: report });
   } catch (error) {
     console.error('Get Report Error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    List all reports for the authenticated user
+// @route   GET /api/report
+// @access  Private
+exports.listReports = async (req, res) => {
+  try {
+    const userId = req.user ? req.user._id : '664e4ea4a93a40498eb79e2a';
+    const list = await getStorageAdapter().listReports(userId);
+    res.status(200).json({ success: true, data: list });
+  } catch (error) {
+    console.error('List Reports Error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };

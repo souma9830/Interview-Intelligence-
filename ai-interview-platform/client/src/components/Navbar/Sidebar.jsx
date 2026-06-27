@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock } from 'lucide-react';
+import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarChart2 } from 'lucide-react';
 
 const S = {
   aside: { width: '240px', background: '#111', borderRight: '1px solid #1e1e1e', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '24px 16px', flexShrink: 0 },
@@ -29,6 +29,7 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
 
   const items = [
     { id: 'home', label: 'Home', icon: HomeIcon, disabled: false },
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart2, disabled: false },
     { id: 'setup', label: 'Interview Setup', icon: Settings, disabled: false },
     { id: 'session', label: 'AI Mock Session', icon: Mic, disabled: !isSetupDone },
     { id: 'coding', label: 'Coding Test', icon: Code2, disabled: !isSessionDone },

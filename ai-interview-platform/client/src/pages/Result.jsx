@@ -367,6 +367,38 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
         </div>
       )}
 
+      {/* Proctored Video Telemetry Review & Logs */}
+      {(globalState.recordedVideoUrl || (globalState.telemetryLogs && globalState.telemetryLogs.length > 0)) && (
+        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', marginBottom: '32px' }}>
+          <span style={{ fontSize: '13px', fontWeight: '600', color: '#ccc', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', borderBottom: '1px solid #1e1e1e', paddingBottom: '8px', marginBottom: '16px' }}>
+            📹 Proctored Video & Telemetry Log
+          </span>
+          <div style={{ display: 'grid', gridTemplateColumns: globalState.recordedVideoUrl ? '1fr 1fr' : '1fr', gap: '20px' }}>
+            {globalState.recordedVideoUrl && (
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: '600', color: '#888', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Session Video Playback</span>
+                <video src={globalState.recordedVideoUrl} controls style={{ width: '100%', borderRadius: '8px', border: '1px solid #222', background: '#000' }} />
+              </div>
+            )}
+            <div>
+              <span style={{ fontSize: '11px', fontWeight: '600', color: '#888', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Telemetry Log Timeline</span>
+              <div style={{ maxHeight: '160px', overflowY: 'auto', background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {globalState.telemetryLogs && globalState.telemetryLogs.length > 0 ? (
+                  globalState.telemetryLogs.map((log, idx) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#aaa', borderBottom: '1px dashed #222', paddingBottom: '4px' }}>
+                      <span style={{ color: log.event.includes('Violation') ? '#ef4444' : '#4ade80' }}>{log.event}</span>
+                      <span style={{ fontFamily: 'monospace', color: '#666' }}>{log.time}</span>
+                    </div>
+                  ))
+                ) : (
+                  <span style={{ fontSize: '11px', color: '#444', fontStyle: 'italic' }}>No logs recorded.</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Restart CTA */}
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <button

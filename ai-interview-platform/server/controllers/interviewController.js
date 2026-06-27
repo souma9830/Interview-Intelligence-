@@ -1,4 +1,5 @@
 const { generateQuestionsFromResume, evaluateAnswer, synthesizeInterviewReport, evaluateCodingSolution } = require('../services/geminiService');
+const { getStorageAdapter } = require('../repositories/storageAdapter');
 
 // @desc    Initialize a new mock interview session with Gemini-generated resume-based questions
 // @route   POST /api/interview/start
@@ -59,10 +60,12 @@ exports.startInterview = async (req, res) => {
       status: 'speaking_active',
     };
 
+    const persisted = await getStorageAdapter().saveInterview(interviewData);
+
     res.status(201).json({
       success: true,
-      message: 'Interview session initialized with Gemini-personalized questions (stateless)',
-      data: interviewData,
+      message: 'Interview session initialized and persisted successfully',
+      data: persisted,
     });
   } catch (error) {
     console.error('Start Interview Error:', error.message);
@@ -70,7 +73,7 @@ exports.startInterview = async (req, res) => {
   }
 };
 
-// @desc    Submit candidate answer and get Gemini real-time evaluation
+// @desc    Submit candidate answer and update database
 // @route   POST /api/interview/answer
 // @access  Private
 exports.submitAnswer = async (req, res) => {
@@ -81,10 +84,18 @@ exports.submitAnswer = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please specify interviewId, questionIndex, and answerText' });
     }
 
-    // Stateless execution - just confirm receipt
+    const storage = getStorageAdapter();
+    const interview = await storage.getInterview(interviewId);
+    if (interview) {
+      if (interview.questions && interview.questions[questionIndex]) {
+        interview.questions[questionIndex].candidateAnswer = answerText;
+        await storage.saveInterview(interview);
+      }
+    }
+
     res.json({
       success: true,
-      message: `Answer for question index ${questionIndex} processed statelessly`,
+      message: `Answer for question index ${questionIndex} saved successfully`,
       data: { _id: interviewId },
     });
   } catch (error) {
@@ -136,6 +147,19 @@ exports.evaluateCode = async (req, res) => {
 
     if (!role || !code || !language) {
       return res.status(400).json({ success: false, message: 'Please specify role, code submission, and language' });
+    }
+
+    // Input safety and guard constraints
+    const allowedRoles = ['Frontend Engineer', 'Backend Engineer', 'Fullstack Engineer', 'AI / ML Engineer'];
+    const allowedLanguages = ['javascript', 'cpp', 'java', 'python'];
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid or unsupported role track' });
+    }
+    if (!allowedLanguages.includes(language.toLowerCase())) {
+      return res.status(400).json({ success: false, message: 'Invalid or unsupported coding language' });
+    }
+    if (code.length > 30000) {
+      return res.status(400).json({ success: false, message: 'Code size limit exceeded (maximum 30KB)' });
     }
 
     console.log(`[Code Evaluator] Executing ${language} code for exact output...`);
@@ -338,4 +362,22 @@ exports.analyzeResumeAndMatchSkills = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Log proctored session telemetry event
+// @route   POST /api/interview/telemetry
+// @access  Private
+exports.logTelemetry = async (req, res) => {
+  try {
+    const { interviewId, timestamp, eventType, description } = req.body;
+    console.log(`[Telemetry Log] Session: ${interviewId || 'unknown'}, Event: ${eventType} - ${description} at ${timestamp}`);
+    res.json({
+      success: true,
+      message: 'Telemetry log received statelessly'
+    });
+  } catch (error) {
+    console.error('Telemetry Log Error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 

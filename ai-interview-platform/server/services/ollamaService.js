@@ -5,6 +5,7 @@
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3';
+const { sanitizeAndParseJson } = require('../utils/jsonSanitizer');
 
 /**
  * Generate technical, HR, and coding questions using local Ollama LLM.
@@ -76,16 +77,11 @@ Output strictly a JSON object with this EXACT structure, containing no other tex
     const resJson = await response.json();
     const cleanResponseText = resJson.response || '';
 
-    // Attempt to parse clean JSON object from the response string
-    const jsonStart = cleanResponseText.indexOf('{');
-    const jsonEnd = cleanResponseText.lastIndexOf('}') + 1;
-    
-    if (jsonStart !== -1 && jsonEnd !== -1) {
-      const parsedData = JSON.parse(cleanResponseText.substring(jsonStart, jsonEnd));
-      if (parsedData.technical && parsedData.hr && parsedData.coding) {
-        console.log('✔ Ollama dynamic question generation completed successfully.');
-        return parsedData;
-      }
+    // Attempt to parse clean JSON object from the response string using the sanitizer
+    const parsedData = sanitizeAndParseJson(cleanResponseText, null);
+    if (parsedData && parsedData.technical && parsedData.hr && parsedData.coding) {
+      console.log('✔ Ollama dynamic question generation completed successfully.');
+      return parsedData;
     }
     
     throw new Error('Ollama output did not match expected JSON schema boundaries');

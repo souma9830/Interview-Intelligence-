@@ -1,4 +1,6 @@
 const pdfParse = require('pdf-parse');
+const { parserCache } = require('./cacheManager');
+const crypto = require('crypto');
 
 /**
  * Extracts plain text from a raw PDF buffer using pdf-parse.
@@ -12,6 +14,13 @@ const extractTextFromPDF = async (buffer) => {
       throw new Error('PDF buffer is empty or undefined');
     }
 
+    const hash = crypto.createHash('md5').update(buffer).digest('hex');
+    const cachedText = parserCache.get(hash);
+    if (cachedText) {
+      console.log('[Cache] Returning cached parsed PDF text.');
+      return cachedText;
+    }
+
     const data = await pdfParse(buffer);
     let textContent = data.text || '';
 
@@ -23,6 +32,7 @@ const extractTextFromPDF = async (buffer) => {
       return 'Image/Scan-only Resume Document';
     }
 
+    parserCache.set(hash, textContent);
     return textContent;
   } catch (error) {
     console.error('PDF parsing error, attempting default regex extraction fallback:', error.message);
