@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
+  // userToken matches camsense state validations dynamically
   const [token, setToken] = useState(localStorage.getItem('camsense_token') || '');
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(!!token);
