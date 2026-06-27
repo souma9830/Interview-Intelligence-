@@ -10,7 +10,7 @@ const { protect } = require('../middleware/authMiddleware');
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024 // limit size to 5MB max
+    fileSize: 5 * 1024 * 1024 // limit size to 5MB max to prevent large upload buffer exploitation
   }
 });
 

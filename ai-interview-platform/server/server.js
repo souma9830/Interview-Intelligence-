@@ -16,4 +16,6 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`✔ Stateless API server listening gracefully on port ${PORT}`);
+  console.log(`[Diagnostic] Node.js Version: ${process.version}`);
+  console.log(`[Diagnostic] Platform: ${process.platform}`);
 });
