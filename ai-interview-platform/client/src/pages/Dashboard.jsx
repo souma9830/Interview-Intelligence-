@@ -1,27 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, User } from 'lucide-react';
+import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const fetchReports = async () => {
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      const token = localStorage.getItem('camsense_token') || 'demo_token_active';
+      const res = await fetch('/api/report', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Unable to load assessment reports.');
+      }
+      setReports(Array.isArray(json.data) ? json.data : []);
+    } catch (err) {
+      console.error('Error fetching reports:', err);
+      setErrorMessage(err.message || 'Unable to load assessment reports.');
+      setReports([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const token = localStorage.getItem('camsense_token') || 'demo_token_active';
-        const res = await fetch('/api/report', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const json = await res.json();
-        if (json.success && json.data) {
-          setReports(json.data);
-        }
-      } catch (err) {
-        console.error('Error fetching reports:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchReports();
   }, []);
 
@@ -58,6 +65,26 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#555', fontSize: '13px' }}>
         Loading historical assessment records…
+      </div>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <div style={{ maxWidth: '720px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ background: '#111', border: '1px solid #3a1f1f', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
+          <AlertCircle size={34} color="#f87171" style={{ marginBottom: '16px' }} />
+          <h1 style={{ fontSize: '20px', fontWeight: '700', color: '#fff', margin: '0 0 8px' }}>Unable to load reports</h1>
+          <p style={{ fontSize: '13px', color: '#aaa', maxWidth: '420px', margin: '0 auto 24px', lineHeight: '1.5' }}>
+            {errorMessage}
+          </p>
+          <button
+            onClick={fetchReports}
+            style={{ padding: '10px 18px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <RefreshCw size={13} /> Retry
+          </button>
+        </div>
       </div>
     );
   }
