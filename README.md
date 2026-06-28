@@ -1,8 +1,8 @@
-# 🤖 Camsense AI — AI Mock Interview & Proctoring Platform
+# 🤖 Interview Intelligence — AI Mock Interview & Proctoring Platform
 
 An advanced, open-source mock interview platform that simulates real-world hiring rounds with AI-generated, resume-specific questions, live coding sandboxes, performance analytics, and anti-cheating telemetry.
 
-Camsense AI acts as a stateless, high-fidelity assessment tool designed to help developers practice technical, behavioral, and coding interviews while providing admins with detailed compliance and performance tracking.
+Interview Intelligence acts as a stateless, high-fidelity assessment tool designed to help developers practice technical, behavioral, and coding interviews while providing admins with detailed compliance and performance tracking.
 
 ---
 
