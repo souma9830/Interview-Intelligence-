@@ -86,4 +86,59 @@ describe('Interview Endpoints', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.overallScore).toBe(90);
   });
+
+  it('should reject coding evaluation requests with missing required fields', async () => {
+    const res = await request(app)
+      .post('/api/interview/coding/eval')
+      .send({
+        role: 'Frontend Engineer',
+        language: 'javascript'
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/role, code submission, and language/i);
+  });
+
+  it('should reject unsupported coding roles', async () => {
+    const res = await request(app)
+      .post('/api/interview/coding/eval')
+      .send({
+        role: 'Security Researcher',
+        code: 'const answer = 42;',
+        language: 'javascript'
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/unsupported role/i);
+  });
+
+  it('should reject unsupported coding languages', async () => {
+    const res = await request(app)
+      .post('/api/interview/coding/eval')
+      .send({
+        role: 'Frontend Engineer',
+        code: 'SELECT 1;',
+        language: 'sql'
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/unsupported coding language/i);
+  });
+
+  it('should reject oversized coding submissions', async () => {
+    const res = await request(app)
+      .post('/api/interview/coding/eval')
+      .send({
+        role: 'Frontend Engineer',
+        code: 'a'.repeat(30001),
+        language: 'javascript'
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/code size limit exceeded/i);
+  });
 });
