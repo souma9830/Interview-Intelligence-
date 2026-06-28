@@ -44,6 +44,10 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
     setCurrentTab(id);
   };
 
+  const getNavLabel = (label, disabled) => (
+    disabled ? `${label} locked until previous assessment step is complete` : `Open ${label}`
+  );
+
   return (
     <aside style={S.aside}>
       <div>
@@ -56,17 +60,19 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
         </div>
 
         <div style={S.navLabel}>Navigation</div>
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <nav aria-label="Assessment navigation" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {items.map(({ id, label, icon: Icon, disabled }) => (
             <button 
               key={id} 
               onClick={() => handleNavClick(id, disabled)} 
               style={S.navBtn(currentTab === id, disabled)}
               disabled={disabled}
+              aria-current={currentTab === id ? 'page' : undefined}
+              aria-label={getNavLabel(label, disabled)}
             >
               <Icon size={15} />
               <span style={{ flex: 1 }}>{label}</span>
-              {disabled && <Lock size={12} style={{ color: '#666' }} />}
+              {disabled && <Lock size={12} style={{ color: '#666' }} aria-hidden="true" />}
             </button>
           ))}
         </nav>
@@ -80,8 +86,8 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
             <div style={{ fontSize: '11px', color: '#4ade80', marginTop: '1px' }}>● Connected</div>
           </div>
           {onLogout && (
-            <button onClick={onLogout} style={S.logoutBtn} title="Logout">
-              <LogOut size={15} />
+            <button onClick={onLogout} style={S.logoutBtn} title="Logout" aria-label="Log out of CamSense AI">
+              <LogOut size={15} aria-hidden="true" />
             </button>
           )}
         </div>
