@@ -5,7 +5,7 @@
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3';
-const { sanitizeAndParseJson } = require('../utils/jsonSanitizer');
+const { sanitizeAndParseJson } = require('../utils/sanitizers/jsonSanitizer');
 
 /**
  * Generate technical, HR, and coding questions using local Ollama LLM.
