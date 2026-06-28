@@ -2,6 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Award, Download, CheckCircle, RefreshCw, Sparkles, BookOpen, ThumbsUp, HelpCircle, AlertCircle } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
+const normalizeScore = (score, fallback = 0) => {
+  const numericScore = Number(score);
+  const safeScore = Number.isFinite(numericScore) ? numericScore : fallback;
+  return Math.min(Math.max(Math.round(safeScore), 0), 100);
+};
+
+const normalizeReportScores = (report = {}) => ({
+  ...report,
+  overallScore: normalizeScore(report.overallScore),
+  resumeScore: normalizeScore(report.resumeScore),
+  interviewScore: normalizeScore(report.interviewScore),
+  codingScore: normalizeScore(report.codingScore),
+});
+
 export default function Result({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
   const experience = globalState.experience || 'Mid-level (2-5 yrs)';
@@ -112,6 +126,7 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
 
   const handleDownload = () => {
     if (!reportData) return;
+    const exportReport = normalizeReportScores(reportData);
     setDownloading(true);
     setDownloaded(false);
     setTimeout(() => {
@@ -151,7 +166,7 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
       doc.text(`Candidate: Camsense Platform Participant`, 18, y + 14);
       doc.text(`Target Track: ${selectedRole}`, 18, y + 20);
       doc.text(`Difficulty: ${globalState.difficulty || 'Medium'}`, 110, y + 14);
-      doc.text(`Overall Score: ${reportData.overallScore}%`, 110, y + 20);
+      doc.text(`Overall Score: ${exportReport.overallScore}%`, 110, y + 20);
 
       y += 40;
       doc.setDrawColor(15, 15, 15);
@@ -169,7 +184,7 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
       doc.text('RESUME SCORE', 18, y + 18);
       doc.setTextColor(15, 15, 15);
       doc.setFontSize(12);
-      doc.text(`${reportData.resumeScore}%`, 18, y + 25);
+      doc.text(`${exportReport.resumeScore}%`, 18, y + 25);
 
       doc.setFillColor(245, 245, 245);
       doc.rect(76, y + 12, 56, 16, 'F');
@@ -178,7 +193,7 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
       doc.text('INTERVIEW SCORE', 80, y + 18);
       doc.setTextColor(15, 15, 15);
       doc.setFontSize(12);
-      doc.text(`${reportData.interviewScore}%`, 80, y + 25);
+      doc.text(`${exportReport.interviewScore}%`, 80, y + 25);
 
       doc.setFillColor(245, 245, 245);
       doc.rect(138, y + 12, 56, 16, 'F');
@@ -187,7 +202,7 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
       doc.text('CODING SCORE', 142, y + 18);
       doc.setTextColor(15, 15, 15);
       doc.setFontSize(12);
-      doc.text(`${reportData.codingScore}%`, 142, y + 25);
+      doc.text(`${exportReport.codingScore}%`, 142, y + 25);
 
       y += 42;
       doc.setTextColor(...colPrimary);
@@ -219,7 +234,7 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
     );
   }
 
-  const report = reportData || {};
+  const report = normalizeReportScores(reportData || {});
 
   return (
     <div style={{ maxWidth: '840px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
