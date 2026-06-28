@@ -218,6 +218,23 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
     setIsRecording(false);
   };
 
+  const getBoilerplateForLanguage = (nextLanguage) => (
+    LANGUAGE_BOILERPLATES[nextLanguage]?.[selectedRole] || ''
+  );
+
+  const handleLanguageChange = (nextLanguage) => {
+    if (!LANGUAGE_BOILERPLATES[nextLanguage] || nextLanguage === language) return;
+    stopVoiceRecording();
+    setLanguage(nextLanguage);
+    setCode(getBoilerplateForLanguage(nextLanguage));
+    setConsoleLogs([
+      "// Sandbox initialized successfully.",
+      `// Compiler environment: ${LANGUAGE_BOILERPLATES[nextLanguage]?.label}`,
+      "// Press 'Run execution' to evaluate assertion test cases."
+    ]);
+    setEvalReport(null);
+  };
+
   const toggleRecording = () => {
     if (isRecording) stopVoiceRecording();
     else startVoiceRecording();
@@ -507,7 +524,7 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
           {/* Sandbox controls footer */}
           <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <button
-              onClick={() => setCode(LANGUAGE_BOILERPLATES[language]?.[selectedRole] || '')}
+              onClick={() => setCode(getBoilerplateForLanguage(language))}
               style={{ padding: '8px', background: 'transparent', border: '1px solid #222', borderRadius: '6px', cursor: 'pointer', color: '#555' }}
               title="Reset boilerplate template"
             >
