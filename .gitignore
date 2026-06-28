@@ -35,5 +35,12 @@ Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
-*.sw?
+# Backup and Temporary Files
+*old_controller*
+*.tmp
+*.bak
+
+# PDF Resumes and Uploaded Artifacts
+*.pdf
+ai-interview-platform/uploads/
+ai-interview-platform/.db.json

@@ -1,0 +1,30 @@
+name: Repository Hygiene Validation
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  validate-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Scan for Unwanted Files
+        run: |
+          echo "Scanning for temporary backup controllers..."
+          if find . -name "*old_controller*" | grep -q .; then
+            echo "::error::Found backup old_controller files! Please clean up backup files."
+            exit 1
+          fi
+
+          echo "Scanning for stray uploads..."
+          if find . -path "*/uploads/*.pdf" | grep -q .; then
+            echo "::error::Found PDF files in upload folders! Uploads must be Git-ignored."
+            exit 1
+          fi
+          
+          echo "✔ Hygiene validation checks passed."

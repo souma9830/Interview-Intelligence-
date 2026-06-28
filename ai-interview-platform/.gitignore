@@ -20,3 +20,9 @@ pnpm-debug.log*
 # System Files
 .DS_Store
 Thumbs.db
+
+# Project Uploads and Temp Database
+uploads/
+*.pdf
+.db.json
+*old_controller*

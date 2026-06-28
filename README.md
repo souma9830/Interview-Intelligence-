@@ -127,8 +127,14 @@ npm run client
 
 To ensure smooth testing without consuming Gemini or JDoodle API quotas:
 1. **Ollama Integration**: If the `GEMINI_API_KEY` is not present, or if Ollama is running locally, you can choose to query a local `llama3` model for parsing. If both are unreachable, the server falls back to high-quality pre-seeded technical question pools based on target roles.
-2. **Local Resume Extraction**: Uses a local regex-based keyword parser in `server/utils/resumeParser.js` to identify skills if LLMs fail or are disconnected.
+2. **Local Resume Extraction**: Uses a local regex-based keyword parser in `server/utils/parsers/resumeParser.js` to identify skills if LLMs fail or are disconnected.
 3. **Simulation Compiler**: If JDoodle API credentials are not found in the env variables, the coding sandbox runs simulated executions utilizing LLM heuristics.
+
+---
+
+## 🧼 Repository Hygiene & Validation
+
+We maintain strict clean branch practices. Automated workflows validate that no temporary back-ups (like `old_controller`), un-ignored build artifacts, or client resume uploads (.pdf) are checked into source control. Always verify files with `git status` before committing.
 
 ---
 
