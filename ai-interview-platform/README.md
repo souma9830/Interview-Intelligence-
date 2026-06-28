@@ -72,6 +72,14 @@ cd ai-interview-platform
 ### 2. Configure Environment Variables
 You need to create a `.env` file in the **root** folder and another in the **client** folder.
 
+Safe starter templates are included:
+```bash
+cp .env.example .env
+cp client/.env.example client/.env
+```
+
+`GEMINI_API_KEY`, Ollama, JDoodle, and Firebase Admin values are optional for local demo flows. Leave them blank when testing the stateless fallbacks, and provide real values only for integrations you actively use.
+
 #### Root `.env` Setup
 Create `.env` in the project root:
 ```env
