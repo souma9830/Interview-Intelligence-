@@ -233,7 +233,15 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
       const res = await fetch('/api/interview/follow-up', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer demo_token_active' },
-        body: JSON.stringify({ interviewId: interviewId === 'demo_session_active' ? undefined : interviewId, questionIndex: currentIdx, candidateAnswer: userTranscript }),
+        body: JSON.stringify({
+          interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
+          questionIndex: currentIdx,
+          candidateAnswer: userTranscript,
+          originalQuestionText: questions[currentIdx]?.questionText,
+          category: questions[currentIdx]?.category,
+          role: selectedRole,
+          experience: globalState.experience,
+        }),
       });
       const json = await res.json();
       if (json.success && json.data) {

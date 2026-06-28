@@ -242,8 +242,8 @@ exports.submitAnswerAndGenerateFollowUp = async (req, res) => {
   try {
     const { interviewId, questionIndex, candidateAnswer } = req.body;
 
-    if (!interviewId || questionIndex === undefined || !candidateAnswer) {
-      return res.status(400).json({ success: false, message: 'Please specify interviewId, questionIndex, and candidateAnswer' });
+    if (questionIndex === undefined || !candidateAnswer) {
+      return res.status(400).json({ success: false, message: 'Please specify questionIndex and candidateAnswer' });
     }
 
     // Extract original question statelessly from the frontend if passed
