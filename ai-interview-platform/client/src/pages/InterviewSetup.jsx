@@ -28,6 +28,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   const [parsedProfile, setParsedProfile] = useState(null);
   const [activePreviewTab, setActivePreviewTab] = useState('skills');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isStartingInterview, setIsStartingInterview] = useState(false);
 
   const roles = [
     { name: 'Frontend Engineer', icon: Code, desc: 'React, System Architecture, UI performance' },
@@ -152,9 +153,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
     }
   };
 
-  const handleStartInterview = () => {
-    setGlobalState(prev => ({
-      ...prev,
+  const buildSessionState = (overrides = {}) => ({
       role,
       experience,
       resumeUploaded,
@@ -162,7 +161,49 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
       jobDescription: jobDescription || 'Standard Developer profile',
       difficulty,
       matchPercentage: matchData ? matchData.matchPercentage : 0,
-    }));
+      resumeSkills: parsedProfile?.skills || [],
+      resumeEducation: parsedProfile?.education || [],
+      resumeProjects: parsedProfile?.projects || [],
+      resumeExperience: parsedProfile?.experience || [],
+      resumeSummary: parsedProfile?.summary || '',
+      resumeText: parsedProfile?.extractedText || '',
+      ...overrides,
+  });
+
+  const handleStartInterview = async () => {
+    setIsStartingInterview(true);
+    setErrorMessage('');
+    const sessionState = buildSessionState();
+
+    try {
+      const token = localStorage.getItem('camsense_token') || 'demo_token_active';
+      const response = await fetch('/api/interview/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(sessionState),
+      });
+      const json = await response.json();
+      if (!response.ok || !json.success) {
+        throw new Error(json.message || 'Unable to initialize interview session.');
+      }
+
+      setGlobalState(prev => ({
+        ...prev,
+        ...buildSessionState({
+          interviewId: json.data?._id,
+          questions: Array.isArray(json.data?.questions) ? json.data.questions : [],
+        }),
+      }));
+    } catch (err) {
+      console.warn('Interview initialization fell back to offline mode:', err);
+      setErrorMessage('Interview engine is offline. Starting with built-in practice questions.');
+      setGlobalState(prev => ({
+        ...prev,
+        ...buildSessionState({ interviewId: 'demo_session_active' }),
+      }));
+    } finally {
+      setIsStartingInterview(false);
+    }
     setCurrentTab('session');
   };
 
@@ -376,12 +417,13 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
           {/* CTA */}
           <button
             onClick={handleStartInterview}
+            disabled={isStartingInterview}
             style={{
-              width: '100%', padding: '12px 24px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+              width: '100%', padding: '12px 24px', background: isStartingInterview ? '#1a1a1a' : '#fff', color: isStartingInterview ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: isStartingInterview ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.15s',
             }}
           >
-            Launch Interview Session <ChevronRight size={15} />
+            {isStartingInterview ? 'Generating questions…' : <>Launch Interview Session <ChevronRight size={15} /></>}
           </button>
 
         </div>
