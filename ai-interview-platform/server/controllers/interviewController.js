@@ -13,6 +13,9 @@ exports.startInterview = async (req, res) => {
     if (!role || !experience) {
       return res.status(400).json({ success: false, message: 'Please specify target role and experience' });
     }
+    if (!resumeText && (!Array.isArray(resumeSkills) || resumeSkills.length === 0) && !resumeSummary) {
+      return res.status(400).json({ success: false, message: 'Please upload and parse a resume before starting an interview session' });
+    }
 
     console.log(`[Interview Start] Generating Gemini-powered resume-based questions for role: ${role}`);
 
@@ -57,6 +60,8 @@ exports.startInterview = async (req, res) => {
       experience,
       difficulty: difficulty || 'Medium',
       jobDescription: jobDescription || '',
+      resumeSummary: resumeSummary || '',
+      resumeSkills: resumeSkills || [],
       questions: questionsList,
       status: 'speaking_active',
     };

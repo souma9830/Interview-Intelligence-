@@ -49,12 +49,27 @@ describe('Interview Endpoints', () => {
   it('should initialize a new interview session', async () => {
     const res = await request(app)
       .post('/api/interview/start')
-      .send({ role: 'Frontend Engineer', experience: 'Mid-level' });
+      .send({
+        role: 'Frontend Engineer',
+        experience: 'Mid-level',
+        resumeSkills: ['React', 'Node.js'],
+        resumeSummary: 'Frontend engineer with production React experience'
+      });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data.role).toBe('Frontend Engineer');
     expect(res.body.data.questions.length).toBeGreaterThan(0);
+  });
+
+  it('should reject interview starts without parsed resume context', async () => {
+    const res = await request(app)
+      .post('/api/interview/start')
+      .send({ role: 'Frontend Engineer', experience: 'Mid-level' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/upload and parse a resume/i);
   });
 
   it('should evaluate an answer in real-time', async () => {

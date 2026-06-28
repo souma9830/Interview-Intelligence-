@@ -153,6 +153,11 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   };
 
   const handleStartInterview = () => {
+    if (!resumeUploaded || !parsedProfile) {
+      setErrorMessage('Upload and parse your resume before launching the interview session.');
+      return;
+    }
+
     setGlobalState(prev => ({
       ...prev,
       role,
@@ -161,6 +166,12 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
       resumeName,
       jobDescription: jobDescription || 'Standard Developer profile',
       difficulty,
+      resumeSkills: parsedProfile.skills || [],
+      resumeEducation: parsedProfile.education || [],
+      resumeProjects: parsedProfile.projects || [],
+      resumeExperience: parsedProfile.experience || [],
+      resumeSummary: parsedProfile.summary || '',
+      resumeText: parsedProfile.extractedText || '',
       matchPercentage: matchData ? matchData.matchPercentage : 0,
     }));
     setCurrentTab('session');
@@ -376,8 +387,9 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
           {/* CTA */}
           <button
             onClick={handleStartInterview}
+            disabled={!resumeUploaded || isUploading}
             style={{
-              width: '100%', padding: '12px 24px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+              width: '100%', padding: '12px 24px', background: !resumeUploaded || isUploading ? '#1a1a1a' : '#fff', color: !resumeUploaded || isUploading ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: !resumeUploaded || isUploading ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.15s',
             }}
           >
