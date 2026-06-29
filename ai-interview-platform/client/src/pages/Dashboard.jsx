@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
+import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, AlertCircle, RefreshCw, Plus } from 'lucide-react';
 
 export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [reports, setReports] = useState([]);
+  const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [scheduleForm, setScheduleForm] = useState({ role: 'Frontend Engineer', scheduledAt: '', durationMinutes: 45, notes: '' });
+  const [scheduleStatus, setScheduleStatus] = useState('');
 
   const fetchReports = async () => {
     setLoading(true);
@@ -19,12 +22,42 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
         throw new Error(json.message || 'Unable to load assessment reports.');
       }
       setReports(Array.isArray(json.data) ? json.data : []);
+
+      const scheduleRes = await fetch('/api/schedules', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const scheduleJson = await scheduleRes.json();
+      if (scheduleRes.ok && scheduleJson.success) {
+        setSchedules(Array.isArray(scheduleJson.data) ? scheduleJson.data : []);
+      }
     } catch (err) {
       console.error('Error fetching reports:', err);
       setErrorMessage(err.message || 'Unable to load assessment reports.');
       setReports([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateSchedule = async (e) => {
+    e.preventDefault();
+    setScheduleStatus('');
+    try {
+      const token = localStorage.getItem('camsense_token') || 'demo_token_active';
+      const res = await fetch('/api/schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(scheduleForm)
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Unable to schedule interview.');
+      }
+      setSchedules(prev => [...prev, json.data].sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt)));
+      setScheduleForm({ role: 'Frontend Engineer', scheduledAt: '', durationMinutes: 45, notes: '' });
+      setScheduleStatus('Interview scheduled successfully.');
+    } catch (err) {
+      setScheduleStatus(err.message || 'Unable to schedule interview.');
     }
   };
 
@@ -98,6 +131,46 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
         <p style={{ fontSize: '14px', color: '#aaa', lineHeight: '1.6' }}>
           Monitor your assessment attempts, skill improvements, and hiring readiness reports.
         </p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+        <form onSubmit={handleCreateSchedule} style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <h2 style={{ fontSize: '14px', fontWeight: '600', color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Calendar size={14} color="#888" /> Schedule Interview
+          </h2>
+          <select value={scheduleForm.role} onChange={e => setScheduleForm(p => ({ ...p, role: e.target.value }))} style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e0e0e0', padding: '10px', fontSize: '13px' }}>
+            <option>Frontend Engineer</option>
+            <option>Backend Engineer</option>
+            <option>Fullstack Engineer</option>
+            <option>AI / ML Engineer</option>
+          </select>
+          <input type="datetime-local" value={scheduleForm.scheduledAt} onChange={e => setScheduleForm(p => ({ ...p, scheduledAt: e.target.value }))} required style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e0e0e0', padding: '10px', fontSize: '13px' }} />
+          <input type="number" min="15" max="180" value={scheduleForm.durationMinutes} onChange={e => setScheduleForm(p => ({ ...p, durationMinutes: e.target.value }))} style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e0e0e0', padding: '10px', fontSize: '13px' }} />
+          <textarea value={scheduleForm.notes} onChange={e => setScheduleForm(p => ({ ...p, notes: e.target.value }))} rows={3} placeholder="Preparation notes or target company context" style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e0e0e0', padding: '10px', fontSize: '13px', resize: 'none', lineHeight: '1.5' }} />
+          {scheduleStatus && <div style={{ color: scheduleStatus.includes('successfully') ? '#4ade80' : '#f87171', fontSize: '12px' }}>{scheduleStatus}</div>}
+          <button type="submit" style={{ padding: '10px 14px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <Plus size={14} /> Add Schedule
+          </button>
+        </form>
+
+        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px' }}>
+          <h2 style={{ fontSize: '14px', fontWeight: '600', color: '#fff', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Clock size={14} color="#888" /> Upcoming Sessions
+          </h2>
+          {schedules.length === 0 ? (
+            <p style={{ fontSize: '13px', color: '#777', lineHeight: '1.5', margin: 0 }}>No upcoming interviews scheduled.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {schedules.slice(0, 4).map(schedule => (
+                <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
+                  <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} • {schedule.durationMinutes} min</span>
+                  {schedule.notes && <span style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>{schedule.notes}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {reports.length === 0 ? (

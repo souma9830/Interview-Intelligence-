@@ -4,6 +4,7 @@ const authRoutes = require('./routes/authRoutes');
 const interviewRoutes = require('./routes/interviewRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
+const scheduleRoutes = require('./routes/scheduleRoutes');
 const requestLogger = require('./middleware/logging/requestLogger');
 
 const { globalErrorHandler, notFoundHandler } = require('./middleware/error/errorHandler');
@@ -19,6 +20,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/interview', interviewRoutes);
 app.use('/api/report', reportRoutes);
 app.use('/api/resume', resumeRoutes);
+app.use('/api/schedules', scheduleRoutes);
 
 app.get('/', (req, res) => {
   res.send('AI Interview Platform API is running...');

@@ -66,6 +66,14 @@ class MongoStorage extends StorageAdapter {
   async getResume(userId) {
     return await Resume.findOne({ user: userId }).lean();
   }
+
+  async saveSchedule(schedule) {
+    return { ...schedule, _id: schedule._id || `schedule_${Date.now()}`, createdAt: schedule.createdAt || new Date() };
+  }
+
+  async listSchedules() {
+    return [];
+  }
 }
 
 module.exports = MongoStorage;

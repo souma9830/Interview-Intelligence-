@@ -7,6 +7,7 @@ class MemoryStorage extends StorageAdapter {
     this.interviews = new Map();
     this.reports = new Map();
     this.resumes = new Map();
+    this.schedules = new Map();
   }
 
   async saveUser(user) {
@@ -73,6 +74,21 @@ class MemoryStorage extends StorageAdapter {
 
   async getResume(userId) {
     return this.resumes.get(userId) || null;
+  }
+
+  async saveSchedule(schedule) {
+    const id = schedule._id || `schedule_${Date.now()}`;
+    const record = { ...schedule, _id: id, createdAt: schedule.createdAt || new Date() };
+    this.schedules.set(id, record);
+    return record;
+  }
+
+  async listSchedules(userId) {
+    const list = [];
+    for (const schedule of this.schedules.values()) {
+      if (schedule.user === userId) list.push(schedule);
+    }
+    return list.sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
   }
 }
 

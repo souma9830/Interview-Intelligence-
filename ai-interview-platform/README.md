@@ -102,6 +102,8 @@ VITE_FIREBASE_APP_ID=your_firebase_app_id_here
 VITE_FIREBASE_MEASUREMENT_ID=your_firebase_measurement_id_here
 ```
 
+For password recovery, enable Firebase Authentication email/password sign-in and configure the Firebase password reset email action URL to point at your deployed client origin.
+
 ### 3. Install Dependencies
 Run npm installs for the workspace:
 ```bash

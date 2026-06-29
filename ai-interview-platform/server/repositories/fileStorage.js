@@ -15,7 +15,8 @@ class FileStorage extends StorageAdapter {
         users: [],
         interviews: [],
         reports: [],
-        resumes: []
+        resumes: [],
+        schedules: []
       }, null, 2));
     }
   }
@@ -27,7 +28,7 @@ class FileStorage extends StorageAdapter {
       return JSON.parse(content);
     } catch (err) {
       console.error('Error reading JSON DB:', err.message);
-      return { users: [], interviews: [], reports: [], resumes: [] };
+      return { users: [], interviews: [], reports: [], resumes: [], schedules: [] };
     }
   }
 
@@ -120,6 +121,27 @@ class FileStorage extends StorageAdapter {
   async getResume(userId) {
     const db = this.readDb();
     return db.resumes.find(r => r.user === userId) || null;
+  }
+
+  async saveSchedule(schedule) {
+    const db = this.readDb();
+    if (!db.schedules) db.schedules = [];
+    const id = schedule._id || `schedule_${Date.now()}`;
+    const record = { ...schedule, _id: id, createdAt: schedule.createdAt || new Date() };
+
+    const idx = db.schedules.findIndex(s => s._id === id);
+    if (idx !== -1) db.schedules[idx] = record;
+    else db.schedules.push(record);
+
+    this.writeDb(db);
+    return record;
+  }
+
+  async listSchedules(userId) {
+    const db = this.readDb();
+    return (db.schedules || [])
+      .filter(s => s.user === userId)
+      .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
   }
 }
 
