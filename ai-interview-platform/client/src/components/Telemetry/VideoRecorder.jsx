@@ -22,17 +22,11 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
 
   const getCameraPermission = async () => {
     try {
-      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const videoStream = await navigator.mediaDevices.getUserMedia({
+      const combinedStream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480 },
         audio: true
       });
       setPermission(true);
-      // Combine both streams
-      const combinedStream = new MediaStream([
-        ...videoStream.getVideoTracks(),
-        ...audioStream.getAudioTracks()
-      ]);
       setStream(combinedStream);
       if (liveVideoRef.current) {
         liveVideoRef.current.srcObject = combinedStream;

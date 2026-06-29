@@ -76,7 +76,12 @@ Rules:
     contents: [{ role: 'user', parts: [{ text: prompt }] }]
   });
 
-  const data = JSON.parse(result.response.text());
+  let rawText = result.response.text().trim();
+  if (rawText.startsWith('```json')) rawText = rawText.substring(7);
+  if (rawText.startsWith('```')) rawText = rawText.substring(3);
+  if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3);
+
+  const data = JSON.parse(rawText.trim());
   console.log(`[Gemini] Extracted ${data.skills?.length || 0} skills from resume.`);
   llmCache.set(cacheKey, data);
   return data;
@@ -134,7 +139,12 @@ Respond ONLY with a valid raw JSON object:
     contents: [{ role: 'user', parts: [{ text: prompt }] }]
   });
 
-  const data = JSON.parse(result.response.text());
+  let rawText = result.response.text().trim();
+  if (rawText.startsWith('```json')) rawText = rawText.substring(7);
+  if (rawText.startsWith('```')) rawText = rawText.substring(3);
+  if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3);
+
+  const data = JSON.parse(rawText.trim());
   data.matchPercentage = Math.min(Math.max(Number(data.matchPercentage) || 20, 10), 100);
 
   console.log(`[Gemini] JD match: ${data.matchPercentage}%, ${data.matchingSkills?.length} matching, ${data.missingSkills?.length} missing.`);
@@ -227,7 +237,12 @@ Respond ONLY with a valid raw JSON object. Replace the bracketed text with your 
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
 
-    const data = JSON.parse(result.response.text());
+    let rawText = result.response.text().trim();
+    if (rawText.startsWith('```json')) rawText = rawText.substring(7);
+    if (rawText.startsWith('```')) rawText = rawText.substring(3);
+    if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3);
+
+    const data = JSON.parse(rawText.trim());
     console.log(`[Gemini] Generated ${(data.technical?.length || 0) + (data.hr?.length || 0) + (data.coding?.length || 0)} personalised questions.`);
     return data;
   } catch (err) {
@@ -341,7 +356,12 @@ CRITICAL RULES:
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
 
-    const data = JSON.parse(result.response.text());
+    let rawText = result.response.text().trim();
+    if (rawText.startsWith('```json')) rawText = rawText.substring(7);
+    if (rawText.startsWith('```')) rawText = rawText.substring(3);
+    if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3);
+
+    const data = JSON.parse(rawText.trim());
     const parsedScore = Number(data.score);
     data.score = Math.min(Math.max(Number.isFinite(parsedScore) ? parsedScore : 0, 0), 10);
     console.log(`[Gemini] Answer evaluated. Score: ${data.score}/10, Verdict: ${data.verdict}`);
@@ -409,7 +429,12 @@ Respond ONLY with a valid raw JSON object:
     contents: [{ role: 'user', parts: [{ text: prompt }] }]
   });
 
-  const data = JSON.parse(result.response.text());
+  let rawText = result.response.text().trim();
+  if (rawText.startsWith('```json')) rawText = rawText.substring(7);
+  if (rawText.startsWith('```')) rawText = rawText.substring(3);
+  if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3);
+
+  const data = JSON.parse(rawText.trim());
   // Clamp all scores
   data.overallScore = Math.min(Math.max(Number(data.overallScore) || 60, 10), 100);
   data.technicalScore = Math.min(Math.max(Number(data.technicalScore) || 60, 10), 100);

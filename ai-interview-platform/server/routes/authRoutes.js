@@ -8,4 +8,8 @@ const { protect } = require('../middleware/authMiddleware');
 router.get('/me', protect, authController.getMe);
 router.post('/logout', protect, authController.logout);
 
+// Password Reset Routes
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/verify-otp', authController.verifyOTP);
+
 module.exports = router;

@@ -12,6 +12,8 @@ const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
 const InterviewSession = lazy(() => import('./pages/InterviewSession'));
 const CodingTest = lazy(() => import('./pages/CodingTest'));
 const Result = lazy(() => import('./pages/Result'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const VerifyOTP = lazy(() => import('./pages/VerifyOTP'));
 
 function LoadingScreen({ message = 'Loading workspace...' }) {
   return (
@@ -70,6 +72,8 @@ export default function App() {
       case 'landing': return <Landing setCurrentTab={setCurrentTab} />;
       case 'login': return <Login setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} />;
       case 'signup': return <Signup setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} />;
+      case 'forgot-password': return <ForgotPassword setCurrentTab={setCurrentTab} />;
+      case 'verify-otp': return <VerifyOTP setCurrentTab={setCurrentTab} />;
       case 'home': return <Home setCurrentTab={setCurrentTab} />;
       case 'dashboard': return <Dashboard setCurrentTab={setCurrentTab} setGlobalState={setGlobalState} />;
       case 'setup': return <InterviewSetup setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} />;
@@ -90,7 +94,7 @@ export default function App() {
     );
   }
 
-  const isAuthPage = currentTab === 'login' || currentTab === 'signup' || currentTab === 'landing';
+  const isAuthPage = currentTab === 'login' || currentTab === 'signup' || currentTab === 'landing' || currentTab === 'forgot-password' || currentTab === 'verify-otp';
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0a0a', fontFamily: 'Inter, sans-serif', color: '#e0e0e0' }}>

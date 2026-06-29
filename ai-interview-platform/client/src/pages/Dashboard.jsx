@@ -166,6 +166,22 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
                   <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
                   <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} • {schedule.durationMinutes} min</span>
                   {schedule.notes && <span style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>{schedule.notes}</span>}
+                  
+                  <button 
+                    disabled={new Date(schedule.scheduledAt).getTime() > Date.now()}
+                    onClick={() => {
+                      setGlobalState(prev => ({ ...prev, role: schedule.role }));
+                      setCurrentTab('setup');
+                    }}
+                    style={{
+                      marginTop: '8px', padding: '6px 12px', fontSize: '11px', borderRadius: '4px', border: 'none', cursor: new Date(schedule.scheduledAt).getTime() > Date.now() ? 'not-allowed' : 'pointer',
+                      background: new Date(schedule.scheduledAt).getTime() > Date.now() ? '#1a1a1a' : '#fff',
+                      color: new Date(schedule.scheduledAt).getTime() > Date.now() ? '#555' : '#000',
+                      fontWeight: '600', transition: 'all 0.15s'
+                    }}
+                  >
+                    {new Date(schedule.scheduledAt).getTime() > Date.now() ? 'Starts later' : 'Start Session'}
+                  </button>
                 </div>
               ))}
             </div>

@@ -1,4 +1,9 @@
 const { ApiError } = require('../middleware/error/errorHandler');
+const User = require('../models/User');
+const OTP = require('../models/OTP');
+const sendEmail = require('../utils/emailService');
+const crypto = require('crypto');
+
 
 // @desc    Get current user details statelessly
 // @route   GET /api/auth/me
@@ -33,3 +38,76 @@ exports.logout = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Forgot password (Generate OTP)
+// @route   POST /api/auth/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return next(new ApiError(404, 'There is no user with that email'));
+    }
+
+    // Generate 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+
+    // Save OTP to DB
+    await OTP.create({
+      email,
+      otp
+    });
+
+    // Send email
+    const message = `Your password reset OTP is ${otp}. It is valid for 5 minutes.`;
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'Password Reset OTP',
+        message
+      });
+
+      res.status(200).json({ success: true, data: 'Email sent' });
+    } catch (err) {
+      await OTP.deleteMany({ email });
+      return next(new ApiError(500, 'Email could not be sent'));
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Verify OTP and reset password
+// @route   POST /api/auth/verify-otp
+// @access  Public
+exports.verifyOTP = async (req, res, next) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    const otpRecord = await OTP.findOne({ email, otp });
+
+    if (!otpRecord) {
+      return next(new ApiError(400, 'Invalid or expired OTP'));
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return next(new ApiError(404, 'User not found'));
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    await OTP.deleteMany({ email }); // Delete OTPs for this email after success
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successful',
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -6,13 +6,20 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   const selectedRole = globalState.role || 'Frontend Engineer';
   const interviewId = globalState.interviewId || 'demo_session_active';
 
+  // Redirect if no resume uploaded
+  useEffect(() => {
+    if (!globalState.resumeUploaded) {
+      setCurrentTab('setup');
+    }
+  }, [globalState.resumeUploaded, setCurrentTab]);
+
   // Initialize telemetry logs
   useEffect(() => {
     setGlobalState(prev => ({
       ...prev,
       telemetryLogs: [{ time: new Date().toLocaleTimeString(), event: 'Proctored session initialized' }]
     }));
-  }, []);
+  }, [setGlobalState]);
 
 
   const [questions, setQuestions] = useState(() => {
