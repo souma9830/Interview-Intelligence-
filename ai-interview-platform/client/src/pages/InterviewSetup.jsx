@@ -171,6 +171,10 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   });
 
   const handleStartInterview = async () => {
+    if (!resumeUploaded) {
+      setErrorMessage('Please upload your resume before starting the interview session.');
+      return;
+    }
     setIsStartingInterview(true);
     setErrorMessage('');
     const sessionState = buildSessionState();
@@ -194,17 +198,13 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
           questions: Array.isArray(json.data?.questions) ? json.data.questions : [],
         }),
       }));
+      setCurrentTab('session');
     } catch (err) {
       console.warn('Interview initialization fell back to offline mode:', err);
-      setErrorMessage('Interview engine is offline. Starting with built-in practice questions.');
-      setGlobalState(prev => ({
-        ...prev,
-        ...buildSessionState({ interviewId: 'demo_session_active' }),
-      }));
+      setErrorMessage(err.message || 'Interview engine is offline. Please try again.');
     } finally {
       setIsStartingInterview(false);
     }
-    setCurrentTab('session');
   };
 
   return (
@@ -417,9 +417,9 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
           {/* CTA */}
           <button
             onClick={handleStartInterview}
-            disabled={isStartingInterview}
+            disabled={isStartingInterview || !resumeUploaded}
             style={{
-              width: '100%', padding: '12px 24px', background: isStartingInterview ? '#1a1a1a' : '#fff', color: isStartingInterview ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: isStartingInterview ? 'not-allowed' : 'pointer',
+              width: '100%', padding: '12px 24px', background: isStartingInterview || !resumeUploaded ? '#1a1a1a' : '#fff', color: isStartingInterview || !resumeUploaded ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: isStartingInterview || !resumeUploaded ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.15s',
             }}
           >
