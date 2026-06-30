@@ -13,31 +13,31 @@ const S = {
 };
 
 export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
-  const initialDraft = {
-    role: 'Frontend Engineer',
-    experience: 'Mid-level (2-5 yrs)',
-    resumeUploaded: false,
-    resumeName: '',
-    jobDescription: '',
-    difficulty: 'Medium',
-    parsedProfile: null,
-    matchData: null,
-  };
-  const { draft, setDraft, restored, clearDraft } = useSetupDraft(initialDraft);
-  const { role, experience, resumeUploaded, resumeName, jobDescription, difficulty, parsedProfile, matchData } = draft;
+  const [role, setRole] = useState('Frontend Engineer');
+  const [experience, setExperience] = useState('Mid-level (2-5 yrs)');
+  const [resumeUploaded, setResumeUploaded] = useState(false);
+  const [resumeName, setResumeName] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
+  const [difficulty, setDifficulty] = useState('Medium');
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
   const [loaderMessage, setLoaderMessage] = useState('Initiating cryptographic stream...');
+  const [matchData, setMatchData] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
+  const [parsedProfile, setParsedProfile] = useState(null);
   const [activePreviewTab, setActivePreviewTab] = useState('skills');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+<<<<<<< HEAD
   const [useCustomQuestions, setUseCustomQuestions] = useState(false);
   const [customQuestionsText, setCustomQuestionsText] = useState('');
 
   const updateDraft = (patch) => setDraft(prev => ({ ...prev, ...patch }));
+=======
+  const [isStartingInterview, setIsStartingInterview] = useState(false);
+>>>>>>> origin/master
 
   const roles = [
     { name: 'Frontend Engineer', icon: Code, desc: 'React, System Architecture, UI performance' },
@@ -55,7 +55,9 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
         const resJson = await response.json();
         if (resJson.success && resJson.data) {
           const profile = resJson.data;
-          updateDraft({ resumeUploaded: true, resumeName: profile.fileName || 'profile_resume.pdf', parsedProfile: profile });
+          setResumeUploaded(true);
+          setResumeName(profile.fileName || 'profile_resume.pdf');
+          setParsedProfile(profile);
           calculateMatchingScore(profile.skills, jobDescription);
         }
       } catch (err) {
@@ -70,7 +72,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
     if (!resumeUploaded) { setErrorMessage('Please upload your resume above before running job description analysis.'); return; }
     setIsAnalyzing(true);
     setErrorMessage('');
-    updateDraft({ matchData: null });
+    setMatchData(null);
     try {
       const token = localStorage.getItem('camsense_token');
       if (!token) { setErrorMessage('Session expired. Sign in again.'); setIsAnalyzing(false); return; }
@@ -83,7 +85,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
         }),
       });
       const resJson = await response.json();
-      if (resJson.success && resJson.data) { updateDraft({ matchData: resJson.data }); }
+      if (resJson.success && resJson.data) { setMatchData(resJson.data); }
       else { setErrorMessage(resJson.message || 'Failed to analyze requirements.'); }
     } catch {
       setErrorMessage('Failed to connect to the analysis engine.');
@@ -104,7 +106,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   }, [isUploading]);
 
   const calculateMatchingScore = (skills = [], jdText = '') => {
-    if (!jdText) { updateDraft({ matchData: null }); return; }
+    if (!jdText) { setMatchData(null); return; }
     const textLower = jdText.toLowerCase();
     const matched = skills.filter(s => textLower.includes(s.toLowerCase()));
     const dbSkills = ['JavaScript', 'TypeScript', 'React', 'Node.js', 'Python', 'SQL', 'PostgreSQL', 'Git', 'Docker', 'AWS'];
@@ -113,14 +115,14 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
     let pct = jdSkills.length > 0 ? Math.round((matched.length / jdSkills.length) * 100) : (matched.length > 0 ? 80 : 40);
     pct = Math.min(Math.max(pct, 15), 100);
     let rec = pct >= 80 ? 'Excellent match. Outstanding fits found.' : pct >= 50 ? 'Good overlap. Calibrating focused topics.' : 'Discrepancies identified. Review your profile.';
-    updateDraft({ matchData: { matchPercentage: pct, matchingSkills: matched, missingSkills: missing, recommendation: rec } });
+    setMatchData({ matchPercentage: pct, matchingSkills: matched, missingSkills: missing, recommendation: rec });
   };
 
   const processUpload = async (file) => {
     setIsUploading(true);
     setUploadProgress(20);
     setErrorMessage('');
-    updateDraft({ matchData: null });
+    setMatchData(null);
     const formData = new FormData();
     formData.append('resume', file);
     const token = localStorage.getItem('camsense_token');
@@ -138,7 +140,9 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
       const json = await res.json();
       if (json.success && json.data) {
         setTimeout(() => {
-          updateDraft({ resumeUploaded: true, resumeName: file.name, parsedProfile: json.data });
+          setResumeUploaded(true);
+          setResumeName(file.name);
+          setParsedProfile(json.data);
           calculateMatchingScore(json.data.skills, jobDescription);
           setIsUploading(false);
         }, 600);
@@ -158,6 +162,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
     }
   };
 
+<<<<<<< HEAD
   const handleStartInterview = () => {
     if (!resumeUploaded || !parsedProfile) {
       setErrorMessage('Upload and parse your resume before launching the interview session.');
@@ -174,21 +179,64 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
 
     setGlobalState(prev => ({
       ...prev,
+=======
+  const buildSessionState = (overrides = {}) => ({
+>>>>>>> origin/master
       role,
       experience,
       resumeUploaded,
       resumeName,
       jobDescription: jobDescription || 'Standard Developer profile',
       difficulty,
-      resumeSkills: parsedProfile.skills || [],
-      resumeEducation: parsedProfile.education || [],
-      resumeProjects: parsedProfile.projects || [],
-      resumeExperience: parsedProfile.experience || [],
-      resumeSummary: parsedProfile.summary || '',
-      resumeText: parsedProfile.extractedText || '',
       matchPercentage: matchData ? matchData.matchPercentage : 0,
+<<<<<<< HEAD
       questions: questionsList
     }));
+=======
+      resumeSkills: parsedProfile?.skills || [],
+      resumeEducation: parsedProfile?.education || [],
+      resumeProjects: parsedProfile?.projects || [],
+      resumeExperience: parsedProfile?.experience || [],
+      resumeSummary: parsedProfile?.summary || '',
+      resumeText: parsedProfile?.extractedText || '',
+      ...overrides,
+  });
+
+  const handleStartInterview = async () => {
+    setIsStartingInterview(true);
+    setErrorMessage('');
+    const sessionState = buildSessionState();
+
+    try {
+      const token = localStorage.getItem('camsense_token') || 'demo_token_active';
+      const response = await fetch('/api/interview/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(sessionState),
+      });
+      const json = await response.json();
+      if (!response.ok || !json.success) {
+        throw new Error(json.message || 'Unable to initialize interview session.');
+      }
+
+      setGlobalState(prev => ({
+        ...prev,
+        ...buildSessionState({
+          interviewId: json.data?._id,
+          questions: Array.isArray(json.data?.questions) ? json.data.questions : [],
+        }),
+      }));
+    } catch (err) {
+      console.warn('Interview initialization fell back to offline mode:', err);
+      setErrorMessage('Interview engine is offline. Starting with built-in practice questions.');
+      setGlobalState(prev => ({
+        ...prev,
+        ...buildSessionState({ interviewId: 'demo_session_active' }),
+      }));
+    } finally {
+      setIsStartingInterview(false);
+    }
+>>>>>>> origin/master
     setCurrentTab('session');
   };
 
@@ -201,14 +249,6 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
         <p style={{ fontSize: '14px', color: '#666', lineHeight: '1.6' }}>
           Upload your credentials or resume profile. Camsense extracts your technical capabilities and structures the dynamic assessment questions.
         </p>
-        {restored && (
-          <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', background: '#111', border: '1px solid #2a2a2a', borderRadius: '8px', padding: '10px 12px' }}>
-            <span style={{ fontSize: '12px', color: '#aaa' }}>Restored your last setup draft on this device.</span>
-            <button onClick={clearDraft} style={{ background: 'transparent', border: '1px solid #333', borderRadius: '6px', color: '#ccc', padding: '6px 10px', fontSize: '11px', cursor: 'pointer' }}>
-              Clear draft
-            </button>
-          </div>
-        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
@@ -223,7 +263,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               {roles.map(r => (
-                <button key={r.name} onClick={() => updateDraft({ role: r.name })} style={S.btnRole(role === r.name)}>
+                <button key={r.name} onClick={() => setRole(r.name)} style={S.btnRole(role === r.name)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ color: role === r.name ? '#fff' : '#aaa' }}>
                       <r.icon size={15} />
@@ -243,7 +283,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
             </div>
             <textarea
               value={jobDescription}
-              onChange={e => updateDraft({ jobDescription: e.target.value })}
+              onChange={e => setJobDescription(e.target.value)}
               placeholder="Paste the target JD parameters to calculate skills matches and customize the AI feedback loops..."
               rows={5}
               style={S.inpTextarea}
@@ -269,7 +309,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Difficulty</label>
                 <div style={{ display: 'flex', background: '#0d0d0d', border: '1px solid #222', borderRadius: '6px', padding: '2px' }}>
                   {['Easy', 'Medium', 'Hard'].map(d => (
-                    <button key={d} onClick={() => updateDraft({ difficulty: d })} style={{ flex: 1, padding: '6px', fontSize: '11px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: difficulty === d ? '#1e1e1e' : 'transparent', color: difficulty === d ? '#fff' : '#aaa', transition: 'all 0.15s' }}>
+                    <button key={d} onClick={() => setDifficulty(d)} style={{ flex: 1, padding: '6px', fontSize: '11px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: difficulty === d ? '#1e1e1e' : 'transparent', color: difficulty === d ? '#fff' : '#aaa', transition: 'all 0.15s' }}>
                       {d}
                     </button>
                   ))}
@@ -278,7 +318,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Experience seniority</label>
-                <select value={experience} onChange={e => updateDraft({ experience: e.target.value })} style={S.inpSelect}>
+                <select value={experience} onChange={e => setExperience(e.target.value)} style={S.inpSelect}>
                   <option>Junior-level (0-2 yrs)</option>
                   <option>Mid-level (2-5 yrs)</option>
                   <option>Senior-level (5-8 yrs)</option>
@@ -435,13 +475,13 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
           {/* CTA */}
           <button
             onClick={handleStartInterview}
-            disabled={!resumeUploaded || isUploading}
+            disabled={isStartingInterview}
             style={{
-              width: '100%', padding: '12px 24px', background: !resumeUploaded || isUploading ? '#1a1a1a' : '#fff', color: !resumeUploaded || isUploading ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: !resumeUploaded || isUploading ? 'not-allowed' : 'pointer',
+              width: '100%', padding: '12px 24px', background: isStartingInterview ? '#1a1a1a' : '#fff', color: isStartingInterview ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: isStartingInterview ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.15s',
             }}
           >
-            Launch Interview Session <ChevronRight size={15} />
+            {isStartingInterview ? 'Generating questions…' : <>Launch Interview Session <ChevronRight size={15} /></>}
           </button>
 
         </div>

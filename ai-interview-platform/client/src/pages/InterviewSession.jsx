@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Video, Camera, Play, AlertTriangle } from 'lucide-react';
 import VideoRecorder from '../components/Telemetry/VideoRecorder';
+import { getAuthHeader } from '../utils/authHeaders';
+
 
 export default function InterviewSession({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
@@ -239,7 +241,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     try {
       const res = await fetch('/api/interview/follow-up', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer demo_token_active' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
         body: JSON.stringify({
           interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
           questionIndex: currentIdx,
