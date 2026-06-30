@@ -10,6 +10,21 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
   const [recordedVideoUrl, setRecordedVideoUrl] = useState('');
   const liveVideoRef = useRef(null);
 
+  // Set stream as srcObject when the video node mounts dynamically
+  const setVideoRef = (node) => {
+    if (node && stream) {
+      node.srcObject = stream;
+    }
+    liveVideoRef.current = node;
+  };
+
+  useEffect(() => {
+    if (stream && liveVideoRef.current) {
+      liveVideoRef.current.srcObject = stream;
+    }
+  }, [stream]);
+
+
   useEffect(() => {
     // Start camera stream on mount if active
     if (isSessionActive && !stream) {
@@ -90,7 +105,7 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
 
       <div style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '8px', overflow: 'hidden', background: '#0a0a0a', border: '1px solid #222' }}>
         {permission && stream ? (
-          <video ref={liveVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <video ref={setVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <VideoOff size={24} color="#555" />
