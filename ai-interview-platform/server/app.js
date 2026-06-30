@@ -8,6 +8,12 @@ const scheduleRoutes = require('./routes/scheduleRoutes');
 const requestLogger = require('./middleware/logging/requestLogger');
 
 const { globalErrorHandler, notFoundHandler } = require('./middleware/error/errorHandler');
+const configCheck = require('./utils/configCheck');
+
+const configStatus = configCheck.check();
+if (!configStatus.valid) {
+  console.warn(`[Configuration Warning] Missing environment variables: ${configStatus.missing.join(', ')}`);
+}
 
 const app = express();
 

@@ -9,7 +9,8 @@
     "client": "npm run dev --prefix client",
     "build": "npm run build --prefix client",
     "postinstall": "npm install --prefix client",
-    "test": "jest --runInBand --detectOpenHandles"
+    "test": "jest --runInBand --detectOpenHandles",
+    "validate-env": "node server/bin/validate-env.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
