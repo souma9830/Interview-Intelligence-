@@ -69,16 +69,30 @@ export default function ForgotPassword({ setCurrentTab }) {
             {error && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{error}</p>}
           </div>
 
-          <button type="submit" disabled={loading} style={{ marginTop: '8px', width: '100%', padding: '11px', background: loading ? '#1a1a1a' : '#fff', color: loading ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.15s' }}>
+          <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '8px', width: '100%', padding: '11px', background: loading ? '#1a1a1a' : '#fff', color: loading ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s ease' }}>
             {loading ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Sending OTP…</> : <>Send OTP <ArrowRight size={15} /></>}
           </button>
           
-          <button type="button" onClick={() => setCurrentTab('login')} style={{ width: '100%', padding: '10px', background: 'transparent', color: '#aaa', border: '1px solid #333', borderRadius: '8px', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          <button type="button" onClick={() => setCurrentTab('login')} className="btn-secondary" style={{ width: '100%', padding: '10px', background: 'transparent', color: '#aaa', border: '1px solid #333', borderRadius: '8px', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s ease' }}>
             <ArrowLeft size={15} /> Back to sign in
           </button>
         </form>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-primary:hover:not(:disabled) {
+          background: #e2e2e2 !important;
+          transform: scale(1.01);
+        }
+        .btn-primary:active:not(:disabled) {
+          transform: scale(0.99);
+        }
+        .btn-secondary:hover {
+          color: #fff !important;
+          border-color: #666 !important;
+          background: rgba(255,255,255,0.02) !important;
+        }
+      `}</style>
     </div>
   );
 }
