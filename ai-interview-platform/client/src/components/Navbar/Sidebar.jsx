@@ -1,11 +1,11 @@
 import React from 'react';
-import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarChart2 } from 'lucide-react';
+import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarChart2, Sun, Moon } from 'lucide-react';
 
 const S = {
-  aside: { width: '240px', background: '#111', borderRight: '1px solid #1e1e1e', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '24px 16px', flexShrink: 0 },
-  logo: { display: 'flex', alignItems: 'center', gap: '10px', padding: '0 8px 20px', marginBottom: '8px', borderBottom: '1px solid #1e1e1e' },
+  aside: { width: '240px', background: 'var(--bg-card)', borderRight: '1px solid var(--border-color)', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '24px 16px', flexShrink: 0, transition: 'background 0.3s, border-color 0.3s' },
+  logo: { display: 'flex', alignItems: 'center', gap: '10px', padding: '0 8px 20px', marginBottom: '8px', borderBottom: '1px solid var(--border-color)' },
   logoIcon: { width: '32px', height: '32px', background: '#fff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  logoText: { fontSize: '15px', fontWeight: '700', color: '#fff', letterSpacing: '-0.01em' },
+  logoText: { fontSize: '15px', fontWeight: '700', color: 'var(--color-primary)', letterSpacing: '-0.01em' },
   logoSub: { fontSize: '11px', color: '#888', marginTop: '1px' },
   navLabel: { fontSize: '10px', fontWeight: '600', color: '#888', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '16px 12px 8px' },
   navBtn: (active, disabled) => ({ 
@@ -18,7 +18,7 @@ const S = {
     opacity: disabled ? 0.5 : 1
   }),
   userBox: { marginTop: 'auto', borderTop: '1px solid #1e1e1e', paddingTop: '16px' },
-  avatar: { width: '32px', height: '32px', borderRadius: '8px', background: '#1e1e1e', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', color: '#fff', flexShrink: 0 },
+  avatar: { width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-app)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-primary)', flexShrink: 0 },
   logoutBtn: { background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px', color: '#aaa', display: 'flex', transition: 'color 0.15s' },
 };
 
@@ -26,6 +26,17 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
   const isSetupDone = !!globalState.role;
   const isSessionDone = globalState.userAnswers && globalState.userAnswers.length > 0;
   const isCodingDone = !!globalState.finalCode;
+
+  const [theme, setTheme] = React.useState(() => localStorage.getItem('theme') || 'dark');
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   const items = [
     { id: 'home', label: 'Home', icon: HomeIcon, disabled: false },
@@ -76,6 +87,19 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
             </button>
           ))}
         </nav>
+      </div>
+
+      <div style={{ marginTop: 'auto', marginBottom: '16px' }}>
+        <button
+          onClick={toggleTheme}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--border-color)',
+            background: 'transparent', color: 'var(--color-secondary)', fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s'
+          }}
+        >
+          {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+          <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+        </button>
       </div>
 
       <div style={S.userBox}>
