@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Video, VideoOff, Square, Play, Download, AlertCircle } from 'lucide-react';
+import { STANDARD_AUDIO_CONSTRAINTS, STANDARD_VIDEO_CONSTRAINTS } from '../../utils/audioConstraints';
 
 export default function VideoRecorder({ onRecordingComplete, isSessionActive }) {
   const [permission, setPermission] = useState(false);
@@ -23,8 +24,8 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
   const getCameraPermission = async () => {
     try {
       const combinedStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480 },
-        audio: true
+        video: STANDARD_VIDEO_CONSTRAINTS,
+        audio: STANDARD_AUDIO_CONSTRAINTS
       });
       setPermission(true);
       setStream(combinedStream);
