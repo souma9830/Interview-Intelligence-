@@ -3,6 +3,7 @@ const User = require('../models/User');
 const OTP = require('../models/OTP');
 const sendEmail = require('../services/notificationService');
 const crypto = require('crypto');
+const admin = require('firebase-admin');
 
 
 // @desc    Get current user details statelessly
@@ -100,6 +101,17 @@ exports.verifyOTP = async (req, res, next) => {
 
     user.password = newPassword;
     await user.save();
+
+    // Sync password reset with Firebase Authentication using Firebase Admin SDK
+    try {
+      const fbUser = await admin.auth().getUserByEmail(email);
+      if (fbUser) {
+        await admin.auth().updateUser(fbUser.uid, { password: newPassword });
+        console.log(`[Firebase Auth] Successfully updated password for user: ${email}`);
+      }
+    } catch (fbErr) {
+      console.warn(`[Firebase Auth Warning] Could not sync password reset to Firebase: ${fbErr.message}`);
+    }
 
     await OTP.deleteMany({ email }); // Delete OTPs for this email after success
 
