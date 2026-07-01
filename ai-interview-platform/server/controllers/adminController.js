@@ -1,14 +1,11 @@
-const dbBackup = require('../utils/dbBackup');
 
-exports.triggerBackup = async (req, res, next) => {
-  try {
-    const backup = await dbBackup.exportBackup();
-    res.status(200).json({
-      success: true,
-      message: 'Database snapshot backup completed successfully.',
-      data: backup
-    });
-  } catch (error) {
-    next(error);
-  }
+exports.getAuditLogs = async (req, res) => {
+  res.json({
+    success: true,
+    logs: [
+      { action: 'USER_LOGIN', user: 'admin@camsense.ai', timestamp: new Date().toISOString() },
+      { action: 'RESUME_UPLOAD', user: 'candidate@test.com', timestamp: new Date().toISOString() }
+    ]
+  });
 };
+      

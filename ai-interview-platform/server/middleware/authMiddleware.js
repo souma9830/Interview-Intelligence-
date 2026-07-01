@@ -1,101 +1,30 @@
+
 const admin = require('firebase-admin');
 
-/**
- * Determines if the application is running in a non-production environment.
- * Checks NODE_ENV explicitly — defaults to false when the variable is absent
- * so that misconfigured deploys never silently downgrade to demo mode.
- */
-const isDevelopment = () => {
-  const env = (process.env.NODE_ENV || '').toLowerCase().trim();
-  return env === 'development' || env === 'test';
-};
-
-/**
- * Demo / sandbox user profile returned when the middleware operates
- * in development bypass mode.  Centralised here so every code path
- * that needs it references the same object shape.
- */
-const DEMO_USER_PROFILE = Object.freeze({
-  _id: '664e4ea4a93a40498eb79e2a',
-  name: 'Demo Candidate',
-  email: 'candidate@camsense.ai',
-});
-
-/**
- * Express middleware that validates Firebase ID tokens carried in the
- * Authorization header (Bearer scheme).
- *
- * Security model
- * ──────────────
- * • Production  — every request MUST carry a valid Firebase JWT.
- * • Development — a hard-coded demo token (`demo_token_active`) is
- *                 accepted so that developers can test client flows
- *                 without burning Firebase quota.  The old "token.length < 50"
- *                 shortcut has been removed because it allowed trivial
- *                 auth bypass in any environment.
- */
-const protect = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    if (isDevelopment()) {
-      req.user = { ...DEMO_USER_PROFILE };
+exports.protect = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Unauthenticated' });
+    }
+    const token = authHeader.split(' ')[1];
+    // In development mode, accept dummy token
+    if (process.env.NODE_ENV === 'development' && token === 'demo_token_active') {
+      req.user = { uid: 'demo_uid', role: 'admin' };
       return next();
     }
-
-    return res.status(401).json({
-      success: false,
-      message: 'Not authorized, no token provided',
-    });
+    const decoded = await admin.auth().verifyIdToken(token);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    res.status(401).json({ success: false, message: err.message });
   }
+};
 
-  const token = authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Not authorized, malformed authorization header',
-    });
-  }
-
-  if (token === 'demo_token_active' && isDevelopment()) {
-    req.user = { ...DEMO_USER_PROFILE };
+exports.adminOnly = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
     return next();
   }
-
-  const jwt = require('jsonwebtoken');
-
-  try {
-    // Attempt local JWT verification first (for native accounts)
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
-      req.user = { _id: decoded.id };
-      return next();
-    } catch (localErr) {
-      // Fallback to Firebase JWT verification
-      const decodedToken = await admin.auth().verifyIdToken(token);
-      req.user = {
-        _id: decodedToken.uid,
-        name: decodedToken.name || (decodedToken.email ? decodedToken.email.split('@')[0] : 'User'),
-        email: decodedToken.email || '',
-        picture: decodedToken.picture || '',
-      };
-      return next();
-    }
-  } catch (error) {
-    const isExpired = error.code === 'auth/id-token-expired' || error.name === 'TokenExpiredError';
-    const statusCode = isExpired ? 401 : 403;
-    const clientMessage = isExpired
-      ? 'Session expired. Please sign in again.'
-      : 'Not authorized, token verification failed';
-
-    console.error(`[Auth] Token verification failed: ${error.message}`);
-
-    return res.status(statusCode).json({
-      success: false,
-      message: clientMessage,
-    });
-  }
+  res.status(403).json({ success: false, message: 'Access denied: Administrators only' });
 };
-
-module.exports = { protect };
+      

@@ -1,9 +1,10 @@
+
 const express = require('express');
 const router = express.Router();
-const adminController = require('../controllers/adminController');
-const { protect } = require('../middleware/authMiddleware');
-const adminCheck = require('../middleware/adminCheck');
+const { protect, adminOnly } = require('../middleware/authMiddleware');
+const { getAuditLogs } = require('../controllers/adminController');
 
-router.post('/backup', protect, adminCheck, adminController.triggerBackup);
+router.get('/admin/audit-logs', protect, adminOnly, getAuditLogs);
 
 module.exports = router;
+      
