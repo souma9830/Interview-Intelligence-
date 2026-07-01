@@ -17,6 +17,9 @@ if (!configStatus.valid) {
 
 const adminRoutes = require('./routes/adminRoutes');
 
+const healthRoutes = require('./routes/healthRoutes');
+const rateLimiter = require('./middleware/rateLimiter');
+
 const app = express();
 
 if (!process.env.JWT_SECRET) {
@@ -36,15 +39,16 @@ app.use(requestLogger);
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(rateLimiter(100)); // Apply rate limiter to all routes (max 100 req/min)
 
 app.use('/api/auth', authRoutes);
-app.use('/api', require('./routes/healthRoutes'));
 app.use('/api', require('./routes/telemetryRoutes'));
 app.use('/api', require('./routes/backupRoutes'));
 app.use('/api/interview', interviewRoutes);
 app.use('/api/report', reportRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/schedules', scheduleRoutes);
+app.use('/api/health', healthRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
