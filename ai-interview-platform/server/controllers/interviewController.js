@@ -377,7 +377,8 @@ exports.analyzeResumeAndMatchSkills = async (req, res) => {
 exports.logTelemetry = async (req, res) => {
   try {
     const { interviewId, timestamp, eventType, description } = req.body;
-    console.log(`[Telemetry Log] Session: ${interviewId || 'unknown'}, Event: ${eventType} - ${description} at ${timestamp}`);
+    const { logEvent } = require('../utils/telemetryLogger');
+    logEvent(interviewId, eventType, description, eventType.includes('Violation') ? 'high' : 'info');
     res.json({
       success: true,
       message: 'Telemetry log received statelessly'

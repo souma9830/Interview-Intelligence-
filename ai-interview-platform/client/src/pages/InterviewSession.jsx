@@ -113,6 +113,11 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     };
 
     const handleViolation = () => {
+      fetch('/api/interview/telemetry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interviewId, eventType: 'CheatViolation', description: 'User exited fullscreen mode / blurred tab', timestamp: new Date().toISOString() })
+      }).catch(console.error);
       setIsCheatWarningVisible(true);
       if (window.speechSynthesis) window.speechSynthesis.pause();
       if (recognitionRef.current) recognitionRef.current.stop();
