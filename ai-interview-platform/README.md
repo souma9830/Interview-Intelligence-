@@ -154,7 +154,7 @@ We maintain strict clean branch practices. Automated workflows validate that no 
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [../LICENSE](../LICENSE) file for details.
 
 ## Local Validation
 Run `npm run validate-env` to ensure your local environment configuration is complete.

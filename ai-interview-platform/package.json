@@ -2,6 +2,7 @@
   "name": "ai-interview-platform",
   "version": "1.0.0",
   "description": "AI Interview Platform with mock interviews, coding tests, and detailed reports",
+  "license": "MIT",
   "scripts": {
     "start": "node server/server.js",
     "preserver": "npx kill-port 5000",

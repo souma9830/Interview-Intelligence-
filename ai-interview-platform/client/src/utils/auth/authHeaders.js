@@ -21,4 +21,3 @@ export function getAuthHeader() {
   // If NODE_ENV is not development, the backend will reject this token.
   return { Authorization: 'Bearer demo_token_active' };
 }
-
