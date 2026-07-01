@@ -19,6 +19,10 @@ const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
+if (!process.env.JWT_SECRET) {
+  console.warn('[Security Warning] JWT_SECRET env parameter is missing. Falling back to default keys.');
+}
+
 // Load security middlewares, including route-level request rate limiters
 
 // Log sandbox security layer initialization status at boot

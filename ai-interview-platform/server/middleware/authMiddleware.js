@@ -38,7 +38,6 @@ const protect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // No Authorization header at all — allow demo passthrough only in dev
     if (isDevelopment()) {
       req.user = { ...DEMO_USER_PROFILE };
       return next();
@@ -59,36 +58,38 @@ const protect = async (req, res, next) => {
     });
   }
 
-  // Development-only: accept the known demo sentinel value
   if (token === 'demo_token_active' && isDevelopment()) {
     req.user = { ...DEMO_USER_PROFILE };
     return next();
   }
 
-  // ── Firebase JWT verification (production & development) ──────────
+  const jwt = require('jsonwebtoken');
+
   try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-
-    req.user = {
-      _id: decodedToken.uid,
-      name: decodedToken.name || (decodedToken.email ? decodedToken.email.split('@')[0] : 'User'),
-      email: decodedToken.email || '',
-      picture: decodedToken.picture || '',
-    };
-
-    return next();
+    // Attempt local JWT verification first (for native accounts)
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
+      req.user = { _id: decoded.id };
+      return next();
+    } catch (localErr) {
+      // Fallback to Firebase JWT verification
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      req.user = {
+        _id: decodedToken.uid,
+        name: decodedToken.name || (decodedToken.email ? decodedToken.email.split('@')[0] : 'User'),
+        email: decodedToken.email || '',
+        picture: decodedToken.picture || '',
+      };
+      return next();
+    }
   } catch (error) {
-    // Differentiate expired tokens from malformed ones for the client
-    const isExpired = error.code === 'auth/id-token-expired';
+    const isExpired = error.code === 'auth/id-token-expired' || error.name === 'TokenExpiredError';
     const statusCode = isExpired ? 401 : 403;
     const clientMessage = isExpired
       ? 'Session expired. Please sign in again.'
       : 'Not authorized, token verification failed';
 
-    console.error(
-      `[Auth] Token verification failed — code: ${error.code || 'unknown'}, ` +
-      `message: ${error.message}, ip: ${req.ip}`
-    );
+    console.error(`[Auth] Token verification failed: ${error.message}`);
 
     return res.status(statusCode).json({
       success: false,
