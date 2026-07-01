@@ -20,6 +20,14 @@ const adminRoutes = require('./routes/adminRoutes');
 const app = express();
 
 // Load security middlewares, including route-level request rate limiters
+
+// Log sandbox security layer initialization status at boot
+const { BLOCKED_MODULES, FORBIDDEN_PATTERNS, SUPPORTED_LANGUAGES } = require('./config/sandboxConfig');
+console.log(
+  `[Sandbox Security] Initialized — ${BLOCKED_MODULES.length} blocked modules, ` +
+  `${FORBIDDEN_PATTERNS.length} forbidden patterns, ` +
+  `${SUPPORTED_LANGUAGES.length} supported languages`
+);
 app.use(requestLogger);
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));

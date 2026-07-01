@@ -5,6 +5,7 @@ const router = express.Router();
 const interviewController = require('../controllers/interviewController');
 const questionController = require('../controllers/questionController');
 const { protect } = require('../middleware/authMiddleware');
+const sandboxMiddleware = require('../middleware/sandboxMiddleware');
 
 // Set up memory storage parser for multer uploads
 const upload = multer({
@@ -20,7 +21,11 @@ router.post('/start', protect, interviewController.startInterview);
 router.post('/answer', protect, interviewController.submitAnswer);
 router.post('/follow-up', protect, interviewController.submitAnswerAndGenerateFollowUp);
 router.post('/questions', protect, questionController.generateQuestion);
-router.post('/coding/eval', protect, interviewController.evaluateCode);
+
+// Code evaluation endpoints pass through the sandbox security layer
+// before reaching the controller. This prevents execution of code
+// containing filesystem access, process spawning, or network calls.
+router.post('/coding/eval', protect, sandboxMiddleware, interviewController.evaluateCode);
 router.post('/evaluate-answer', protect, interviewController.evaluateAnswerRealtime);
 router.post('/telemetry', protect, interviewController.logTelemetry);
 
