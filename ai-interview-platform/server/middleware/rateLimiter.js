@@ -16,9 +16,13 @@ const rateLimiter = (maxRequests = 60, windowMs = 60000) => {
     limitStore.set(ip, validTimestamps);
 
     if (validTimestamps.length > maxRequests) {
+      const isOtpRoute = req.originalUrl && (req.originalUrl.includes('otp') || req.originalUrl.includes('forgot-password'));
+      const message = isOtpRoute 
+        ? 'Too many OTP requests. Please try again after 15 minutes.'
+        : 'Too many requests. Please try again later.';
       return res.status(429).json({
         success: false,
-        message: 'Too many requests. Please try again later.'
+        message
       });
     }
 

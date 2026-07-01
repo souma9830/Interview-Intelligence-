@@ -1,4 +1,5 @@
 const { getStorageAdapter } = require('../repositories/storageAdapter');
+const notificationService = require('../services/notificationService');
 
 const ALLOWED_ROLES = ['Frontend Engineer', 'Backend Engineer', 'Fullstack Engineer', 'AI / ML Engineer'];
 
@@ -48,9 +49,22 @@ exports.createSchedule = async (req, res) => {
       status: 'scheduled',
     });
 
+    const userEmail = req.user?.email || 'candidate@camsense.ai';
+    try {
+      await notificationService.send({
+        to: userEmail,
+        subject: 'Interview Scheduled Successfully',
+        message: `Your mock interview session for the role of ${role} has been scheduled for ${date.toLocaleString()}. Duration: ${safeDuration} minutes.`
+      });
+    } catch (notifyErr) {
+      console.warn('[Schedule Notify Warning] Could not dispatch booking email:', notifyErr.message);
+    }
+
     res.status(201).json({ success: true, message: 'Interview scheduled successfully', data: schedule });
   } catch (error) {
     console.error('Create Schedule Error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Integrated NotificationService for scheduling

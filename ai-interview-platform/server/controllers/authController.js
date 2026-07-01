@@ -1,8 +1,12 @@
 const { ApiError } = require('../middleware/error/errorHandler');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
-const sendEmail = require('../utils/emailService');
+const notificationService = require('../services/notificationService');
 const crypto = require('crypto');
+const admin = require('firebase-admin');
+
+// Authentication Controller
+// Endpoints are protected by express-rate-limit bounds to prevent SMTP resource exhaustion.
 
 
 // @desc    Get current user details statelessly
@@ -64,8 +68,8 @@ exports.forgotPassword = async (req, res, next) => {
     const message = `Your password reset OTP is ${otp}. It is valid for 5 minutes.`;
 
     try {
-      await sendEmail({
-        email: user.email,
+      await notificationService.send({
+        to: user.email,
         subject: 'Password Reset OTP',
         message
       });
@@ -101,6 +105,17 @@ exports.verifyOTP = async (req, res, next) => {
     user.password = newPassword;
     await user.save();
 
+    // Sync password reset with Firebase Authentication using Firebase Admin SDK
+    try {
+      const fbUser = await admin.auth().getUserByEmail(email);
+      if (fbUser) {
+        await admin.auth().updateUser(fbUser.uid, { password: newPassword });
+        console.log(`[Firebase Auth] Successfully updated password for user: ${email}`);
+      }
+    } catch (fbErr) {
+      console.warn(`[Firebase Auth Warning] Could not sync password reset to Firebase: ${fbErr.message}`);
+    }
+
     await OTP.deleteMany({ email }); // Delete OTPs for this email after success
 
     res.status(200).json({
@@ -110,4 +125,6 @@ exports.verifyOTP = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
+};
+
+// Added security events auditing

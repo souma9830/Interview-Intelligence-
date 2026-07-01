@@ -590,3 +590,5 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
     </div>
   );
 }
+
+// Monaco sandbox client runtime integrations updated

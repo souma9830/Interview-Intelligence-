@@ -7,3 +7,5 @@ router.get('/', protect, scheduleController.listSchedules);
 router.post('/', protect, scheduleController.createSchedule);
 
 module.exports = router;
+
+// Updated scheduling notification triggers

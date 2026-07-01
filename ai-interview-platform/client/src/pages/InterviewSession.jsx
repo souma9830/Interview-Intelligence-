@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Video, Camera, Play, AlertTriangle } from 'lucide-react';
 import VideoRecorder from '../components/Telemetry/VideoRecorder';
+import { STANDARD_AUDIO_CONSTRAINTS } from '../utils/audioConstraints';
+import { getAuthHeader } from '../utils/authHeaders';
 
 export default function InterviewSession({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
@@ -239,7 +241,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     try {
       const res = await fetch('/api/interview/follow-up', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer demo_token_active' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
         body: JSON.stringify({
           interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
           questionIndex: currentIdx,
@@ -441,12 +443,21 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
             <div style={{ flexShrink: 0, position: 'relative', width: '68px', height: '68px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg style={{ position: 'absolute', width: '68px', height: '68px', transform: 'rotate(-90deg)' }}>
                 <circle cx="34" cy="34" r="30" stroke="#222" strokeWidth="3" fill="none" />
-                <circle cx="34" cy="34" r="30" stroke={timeLeft <= 10 ? '#ef4444' : '#fff'} strokeWidth="3" fill="none"
+                <circle cx="34" cy="34" r="30" stroke={timeLeft <= 5 ? '#ef4444' : timeLeft <= 15 ? '#f59e0b' : '#fff'} strokeWidth="3" fill="none"
                   strokeDasharray="188.5" strokeDashoffset={188.5 - (188.5 * timeLeft) / 60}
-                  style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.3s' }} />
+                  style={{ 
+                    transition: 'stroke-dashoffset 1s linear, stroke 0.3s',
+                    animation: timeLeft <= 15 ? 'pulse 1s infinite alternate' : 'none'
+                  }} />
               </svg>
               <div style={{ textAlign: 'center', zIndex: 1 }}>
-                <div style={{ fontSize: '16px', fontWeight: '600', color: timeLeft <= 10 ? '#ef4444' : '#e8e8e8', lineHeight: 1 }}>{timeLeft}s</div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  fontWeight: '600', 
+                  color: timeLeft <= 5 ? '#ef4444' : timeLeft <= 15 ? '#f59e0b' : '#e8e8e8', 
+                  lineHeight: 1,
+                  animation: timeLeft <= 15 ? 'pulse 1s infinite alternate' : 'none'
+                }}>{timeLeft}s</div>
                 <div style={{ fontSize: '9px', color: '#aaa', letterSpacing: '0.05em', marginTop: '2px' }}>TIME</div>
               </div>
             </div>

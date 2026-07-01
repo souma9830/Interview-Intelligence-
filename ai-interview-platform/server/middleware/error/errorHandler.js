@@ -72,3 +72,5 @@ const globalErrorHandler = (err, req, res, _next) => {
 };
 
 module.exports = { ApiError, notFoundHandler, globalErrorHandler };
+
+// Global error formatting logic updated

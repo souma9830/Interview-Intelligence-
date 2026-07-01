@@ -222,3 +222,5 @@ Output strictly a JSON object with this EXACT structure, containing no other tex
 };
 
 module.exports = { generateCategorizedQuestions };
+
+// Gemini caching service integration

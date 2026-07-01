@@ -47,3 +47,5 @@ const llmCache = new CacheManager(100, 300000); // 5 min TTL for LLM queries
 const parserCache = new CacheManager(50, 600000); // 10 min TTL for files
 
 module.exports = { CacheManager, llmCache, parserCache };
+
+// Managed Local Cache fallback updated

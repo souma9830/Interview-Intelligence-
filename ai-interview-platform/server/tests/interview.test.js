@@ -157,3 +157,5 @@ describe('Interview Endpoints', () => {
     expect(res.body.message).toMatch(/code size limit exceeded/i);
   });
 });
+
+// Updated diagnostics assertions

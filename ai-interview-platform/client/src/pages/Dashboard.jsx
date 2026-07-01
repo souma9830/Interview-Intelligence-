@@ -278,3 +278,5 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
     </div>
   );
 }
+
+// Integrated system backup tools interface

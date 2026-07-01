@@ -23,16 +23,24 @@ exports.uploadResume = async (req, res) => {
 
     // Step 1: Extract raw text from PDF or DOCX using the shared utility
     let rawText = '';
-    if (mimetype === 'application/pdf' || originalname.endsWith('.pdf')) {
-      rawText = await extractTextFromPDF(buffer);
-    } else if (
-      mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      originalname.endsWith('.docx')
-    ) {
-      const result = await mammoth.extractRawText({ buffer });
-      rawText = result.value;
-    } else {
-      return res.status(400).json({ success: false, message: 'Only PDF and DOCX files are supported.' });
+    try {
+      if (mimetype === 'application/pdf' || originalname.endsWith('.pdf')) {
+        rawText = await extractTextFromPDF(buffer);
+      } else if (
+        mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        originalname.endsWith('.docx')
+      ) {
+        const result = await mammoth.extractRawText({ buffer });
+        rawText = result.value;
+      } else {
+        return res.status(400).json({ success: false, message: 'Only PDF and DOCX files are supported.' });
+      }
+    } catch (parseError) {
+      console.error(`[Resume Upload] Parsing failed for ${originalname}:`, parseError.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Could not extract text from this file. The document may be corrupted, encrypted, or password-protected. Please upload a valid, unencrypted PDF or DOCX.'
+      });
     }
 
     if (!rawText || rawText.trim().length < 50) {

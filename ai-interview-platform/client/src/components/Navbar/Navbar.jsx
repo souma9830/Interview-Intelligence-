@@ -1,3 +1,4 @@
+import HealthIndicator from '../Diagnostics/HealthIndicator';
 import React from 'react';
 import { Activity } from 'lucide-react';
 

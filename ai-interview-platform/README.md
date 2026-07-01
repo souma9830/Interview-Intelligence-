@@ -1,3 +1,7 @@
+## CI Status
+
+![CI Quality Pipeline](https://github.com/souma9830/Interview-Intelligence-/actions/workflows/ci-quality.yml/badge.svg)
+
 # 🤖 Camsense AI — AI Mock Interview & Proctoring Platform
 
 An advanced, open-source mock interview platform that simulates real-world hiring rounds with AI-generated, resume-specific questions, live coding sandboxes, performance analytics, and anti-cheating telemetry.
@@ -151,3 +155,6 @@ We maintain strict clean branch practices. Automated workflows validate that no 
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Local Validation
+Run `npm run validate-env` to ensure your local environment configuration is complete.
