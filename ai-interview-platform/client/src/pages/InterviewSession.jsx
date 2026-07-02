@@ -435,7 +435,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
                 <span style={{ fontSize: '11px', fontWeight: '600', color: '#ccc', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '4px', padding: '3px 8px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                   {questions[currentIdx]?.category || 'technical'}
                 </span>
-                <button onClick={speakQuestion} style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Read aloud">
+                <button onClick={speakQuestion} aria-label="Read question aloud" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Read aloud">
                   <Volume2 size={13} color="#ccc" />
                 </button>
               </div>
@@ -445,8 +445,8 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
             </div>
 
             {/* Timer */}
-            <div style={{ flexShrink: 0, position: 'relative', width: '68px', height: '68px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg style={{ position: 'absolute', width: '68px', height: '68px', transform: 'rotate(-90deg)' }}>
+            <div style={{ flexShrink: 0, position: 'relative', width: '68px', height: '68px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} role="timer" aria-label={`${timeLeft} seconds remaining for this question`}>
+              <svg style={{ position: 'absolute', width: '68px', height: '68px', transform: 'rotate(-90deg)' }} aria-hidden="true">
                 <circle cx="34" cy="34" r="30" stroke="#222" strokeWidth="3" fill="none" />
                 <circle cx="34" cy="34" r="30" stroke={timeLeft <= 5 ? '#ef4444' : timeLeft <= 15 ? '#f59e0b' : '#fff'} strokeWidth="3" fill="none"
                   strokeDasharray="188.5" strokeDashoffset={188.5 - (188.5 * timeLeft) / 60}

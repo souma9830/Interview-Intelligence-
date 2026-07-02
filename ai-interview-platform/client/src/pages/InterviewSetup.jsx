@@ -352,7 +352,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
                 background: dragActive ? '#151515' : '#0d0d0d', borderColor: dragActive ? '#fff' : '#222',
               }}
             >
-              <input type="file" accept=".pdf,.docx" onChange={handleFileChange} disabled={isUploading} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
+              <input type="file" accept=".pdf,.docx" onChange={handleFileChange} disabled={isUploading} aria-label="Upload resume file in PDF or DOCX format" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
               
               {isUploading ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>

@@ -353,6 +353,7 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
             </p>
             <button
               onClick={handleBeginTest}
+              aria-label="Enter fullscreen and begin coding test"
               style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
               Enter Fullscreen & Begin <ChevronRight size={16} />
@@ -440,7 +441,7 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
               {/* Language toggler */}
               <div style={{ display: 'flex', background: '#111', border: '1px solid #222', borderRadius: '6px', padding: '2px' }}>
                 {Object.keys(LANGUAGE_BOILERPLATES).map(lang => (
-                  <button key={lang} onClick={() => handleLanguageChange(lang)} style={{ border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '10px', fontFamily: 'monospace', cursor: 'pointer', background: language === lang ? '#1e1e1e' : 'transparent', color: language === lang ? '#fff' : '#555', transition: 'all 0.15s' }}>
+                  <button key={lang} onClick={() => handleLanguageChange(lang)} aria-label={`Switch to ${LANGUAGE_BOILERPLATES[lang].label}`} style={{ border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '10px', fontFamily: 'monospace', cursor: 'pointer', background: language === lang ? '#1e1e1e' : 'transparent', color: language === lang ? '#fff' : '#555', transition: 'all 0.15s' }}>
                     {LANGUAGE_BOILERPLATES[lang].label}
                   </button>
                 ))}

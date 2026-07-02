@@ -24,6 +24,26 @@
 
 * { box-sizing: border-box; }
 
+.skip-link:focus {
+  left: 16px !important;
+  top: 16px !important;
+  outline: 2px solid #000;
+  outline-offset: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid #888;
+  outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) {
+  outline: none;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background: var(--bg-app);
