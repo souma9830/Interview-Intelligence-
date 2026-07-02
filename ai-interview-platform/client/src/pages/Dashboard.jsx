@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, AlertCircle, RefreshCw, Plus } from 'lucide-react';
+import { SkeletonCard, SkeletonStatCard, SkeletonTable } from '../components/Common/Skeleton';
 
 export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [reports, setReports] = useState([]);
@@ -96,8 +97,22 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#555', fontSize: '13px' }}>
-        Loading historical assessment records…
+      <div style={{ maxWidth: '960px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ height: '28px', width: '40%', background: '#1a1a1a', borderRadius: '6px', marginBottom: '8px' }} />
+          <div style={{ height: '14px', width: '60%', background: '#1a1a1a', borderRadius: '6px' }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+          <SkeletonCard height="300px" />
+          <SkeletonCard height="300px" />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+        </div>
+        <SkeletonTable rows={4} />
       </div>
     );
   }

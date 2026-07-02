@@ -48,3 +48,7 @@ button { font-family: 'Inter', sans-serif; }
 @keyframes ping { 75%,100% { transform: scale(1.8); opacity: 0; } }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 @keyframes bounce-bar { from { transform: scaleY(0.3); } to { transform: scaleY(1); } }
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
