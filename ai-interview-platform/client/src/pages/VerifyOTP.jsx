@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Loader2, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { isValidNumeric } from '../utils/sanitize';
 
 const inp = (err) => ({ width: '100%', background: '#0d0d0d', border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`, borderRadius: '8px', padding: '10px 12px 10px 38px', fontSize: '14px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box', transition: 'border-color 0.15s' });
 
@@ -27,6 +28,10 @@ export default function VerifyOTP({ setCurrentTab }) {
     e.preventDefault();
     if (!otp || !newPassword) {
       setError('Both OTP and new password are required');
+      return;
+    }
+    if (!isValidNumeric(otp, 6)) {
+      setError('OTP must be exactly 6 numeric digits');
       return;
     }
     if (newPassword.length < 6) {
@@ -78,7 +83,7 @@ export default function VerifyOTP({ setCurrentTab }) {
           <div>
             <label style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>OTP Code</label>
             <div style={{ position: 'relative' }}>
-              <input type="text" placeholder="123456" value={otp} onChange={e => { setOtp(e.target.value); setError(''); }} style={{...inp(error), paddingLeft: '12px', textAlign: 'center', letterSpacing: '4px'}} maxLength={6} />
+              <input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="123456" value={otp} onChange={e => { const val = e.target.value.replace(/\D/g, '').slice(0, 6); setOtp(val); setError(''); }} style={{...inp(error), paddingLeft: '12px', textAlign: 'center', letterSpacing: '4px'}} maxLength={6} />
             </div>
           </div>
 
@@ -100,7 +105,6 @@ export default function VerifyOTP({ setCurrentTab }) {
         </form>
       </div>
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
         .btn-primary:hover:not(:disabled) {
           background: #e2e2e2 !important;
           transform: scale(1.01);

@@ -92,6 +92,10 @@ exports.verifyOTP = async (req, res, next) => {
   try {
     const { email, otp, newPassword } = req.body;
 
+    if (!otp || !/^\d{6}$/.test(otp)) {
+      return next(new ApiError(400, 'OTP must be exactly 6 numeric digits'));
+    }
+
     const otpRecord = await OTP.findOne({ email, otp });
 
     if (!otpRecord) {

@@ -1,4 +1,3 @@
-
 import React, { Suspense, lazy, useState, useEffect } from 'react';
 import Sidebar from './components/Navbar/Sidebar';
 import Navbar from './components/Navbar/Navbar';
@@ -18,10 +17,9 @@ const VerifyOTP = lazy(() => import('./pages/VerifyOTP'));
 
 function LoadingScreen({ message = 'Loading workspace...' }) {
   return (
-    <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-      <Loader2 size={24} color="#555" style={{ animation: 'spin 1s linear infinite' }} />
+    <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }} role="status" aria-label="Loading">
+      <Loader2 size={24} color="#555" style={{ animation: 'spin 1s linear infinite' }} aria-hidden="true" />
       <p style={{ fontSize: '13px', color: '#555' }}>{message}</p>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
@@ -87,10 +85,9 @@ export default function App() {
 
   if (checkingAuth) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', fontFamily: 'Inter, sans-serif' }}>
-        <Loader2 size={28} color="#555" style={{ animation: 'spin 1s linear infinite' }} />
+      <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', fontFamily: 'Inter, sans-serif' }} role="status" aria-label="Verifying authentication">
+        <Loader2 size={28} color="#555" style={{ animation: 'spin 1s linear infinite' }} aria-hidden="true" />
         <p style={{ fontSize: '13px', color: '#555' }}>Verifying session…</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -99,10 +96,13 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-app)', fontFamily: 'Inter, sans-serif', color: 'var(--color-text)', transition: 'background 0.3s, color 0.3s' }}>
+      <a href="#main-content" className="skip-link" style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: 9999, padding: '8px 16px', background: '#fff', color: '#000', fontSize: '14px', fontWeight: '600', textDecoration: 'none' }}>
+        Skip to main content
+      </a>
       {!isAuthPage && <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} user={user} globalState={globalState} onLogout={handleLogout} />}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {!isAuthPage && <Navbar />}
-        <main style={{ flex: 1, overflowY: 'auto', padding: isAuthPage ? '0' : '28px 32px', display: isAuthPage ? 'flex' : 'block', alignItems: isAuthPage ? 'center' : undefined, justifyContent: isAuthPage ? 'center' : undefined }}>
+        <main id="main-content" role="main" aria-label="Main content" style={{ flex: 1, overflowY: 'auto', padding: isAuthPage ? '0' : '28px 32px', display: isAuthPage ? 'flex' : 'block', alignItems: isAuthPage ? 'center' : undefined, justifyContent: isAuthPage ? 'center' : undefined }}>
           <Suspense fallback={<LoadingScreen message="Loading assessment workspace..." />}>
             {renderContent()}
           </Suspense>

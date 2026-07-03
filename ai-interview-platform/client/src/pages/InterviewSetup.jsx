@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Sparkles, Code, Compass, AlertCircle, GraduationCap, FileText } from 'lucide-react';
 import { useMediaDevices } from '../hooks/useMediaDevices';
 import QuestionInputCard from '../components/Telemetry/QuestionInputCard';
+import { sanitizeForDisplay } from '../utils/sanitize';
 
 const S = {
   card: { background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -199,7 +200,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
         questionsList = customQuestionsText.split('\n')
           .map(q => q.trim())
           .filter(q => q.length > 0)
-          .map(q => ({ questionText: q, category: 'custom', candidateAnswer: '' }));
+          .map(q => ({ questionText: sanitizeForDisplay(q), category: 'custom', candidateAnswer: '' }));
       }
 
       setGlobalState(prev => ({
@@ -352,7 +353,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
                 background: dragActive ? '#151515' : '#0d0d0d', borderColor: dragActive ? '#fff' : '#222',
               }}
             >
-              <input type="file" accept=".pdf,.docx" onChange={handleFileChange} disabled={isUploading} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
+              <input type="file" accept=".pdf,.docx" onChange={handleFileChange} disabled={isUploading} aria-label="Upload resume file in PDF or DOCX format" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
               
               {isUploading ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>

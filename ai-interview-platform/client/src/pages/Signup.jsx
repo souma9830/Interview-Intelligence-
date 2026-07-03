@@ -146,7 +146,6 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
           </button>
         </p>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

@@ -230,7 +230,6 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', background: '#0a0a0a', fontFamily: 'Inter, sans-serif' }}>
         <RefreshCw size={28} color="#555" style={{ animation: 'spin 1s linear infinite' }} />
         <p style={{ fontSize: '13px', color: '#555' }}>Synthesizing assessment report diagnostics…</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
