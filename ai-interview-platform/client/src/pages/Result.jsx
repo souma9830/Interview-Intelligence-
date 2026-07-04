@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Award, Download, CheckCircle, RefreshCw, Sparkles, BookOpen, ThumbsUp, HelpCircle, AlertCircle } from 'lucide-react';
 import { SkeletonCard } from '../components/Common/Skeleton';
+import { LoadingOverlay } from '../components/Common/LoadingOverlay';
+import { EmptyState } from '../components/Common/EmptyState';
 import { jsPDF } from 'jspdf';
 
 const normalizeScore = (score, fallback = 0) => {
@@ -229,18 +231,27 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
   if (loading) {
     return (
       <div style={{ maxWidth: '840px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{ height: '28px', width: '50%', background: '#1a1a1a', borderRadius: '6px', marginBottom: '8px' }} />
-          <div style={{ height: '14px', width: '70%', background: '#1a1a1a', borderRadius: '6px' }} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '4fr 6fr', gap: '24px', marginBottom: '24px' }}>
-          <SkeletonCard height="320px" />
-          <SkeletonCard height="320px" />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-          <SkeletonCard height="200px" />
-          <SkeletonCard height="200px" />
-        </div>
+        <LoadingOverlay message="Generating your comprehensive assessment report..." />
+      </div>
+    );
+  }
+
+  if (!reportData) {
+    return (
+      <div style={{ maxWidth: '840px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+        <EmptyState
+          icon={AlertCircle}
+          title="No report data available"
+          message="Please complete an interview session before viewing results."
+          action={
+            <button
+              onClick={() => setCurrentTab('setup')}
+              style={{ marginTop: '16px', padding: '10px 20px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+            >
+              Start Setup Session
+            </button>
+          }
+        />
       </div>
     );
   }

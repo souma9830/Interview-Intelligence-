@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Code2, Terminal, Play, ChevronRight, FileCode, RefreshCw, Mic, MicOff, AlertCircle, Award } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { useProctor } from '../hooks/useProctor';
+import { LoadingOverlay } from '../components/Common/LoadingOverlay';
 
 const LANGUAGE_BOILERPLATES = {
   javascript: {
@@ -453,7 +454,7 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
                   scrollBeyondLastLine: false,
                   cursorBlinking: "smooth",
                 }}
-                loading={<div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontSize: '12px' }}>Initializing Editor…</div>}
+                loading={<LoadingOverlay message="Initializing Editor..." />}
               />
             </div>
           </div>
