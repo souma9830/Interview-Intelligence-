@@ -1,5 +1,7 @@
 import React from 'react';
-import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarChart2, Sun, Moon } from 'lucide-react';
+import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarChart2 } from 'lucide-react';
+import { useTheme } from '../../hooks/useTheme';
+import ThemeToggle from '../Common/ThemeToggle';
 
 const S = {
   aside: { width: '240px', background: 'var(--bg-card)', borderRight: '1px solid var(--border-color)', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '24px 16px', flexShrink: 0, transition: 'background 0.3s, border-color 0.3s' },
@@ -27,16 +29,7 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
   const isSessionDone = globalState.userAnswers && globalState.userAnswers.length > 0;
   const isCodingDone = !!globalState.finalCode;
 
-  const [theme, setTheme] = React.useState(() => localStorage.getItem('theme') || 'dark');
-
-  React.useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
+  const { theme, toggleTheme } = useTheme();
 
   const items = [
     { id: 'home', label: 'Home', icon: HomeIcon, disabled: false },
@@ -90,16 +83,7 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
       </div>
 
       <div style={{ marginTop: 'auto', marginBottom: '16px' }}>
-        <button
-          onClick={toggleTheme}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--border-color)',
-            background: 'transparent', color: 'var(--color-secondary)', fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s'
-          }}
-        >
-          {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-          <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-        </button>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </div>
 
       <div style={S.userBox}>
