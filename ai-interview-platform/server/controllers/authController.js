@@ -6,6 +6,7 @@ const notificationService = require('../services/notificationService');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
+const { sendSuccess, sendError, handleControllerError } = require('../utils/apiResponse');
 
 // Authentication Controller
 // Endpoints are protected by express-rate-limit bounds to prevent SMTP resource exhaustion.
@@ -16,16 +17,11 @@ const admin = require('firebase-admin');
 exports.getMe = async (req, res, next) => {
   try {
     if (!req.user) {
-      throw new ApiError(401, 'User context not found in stateless request session');
+      return sendError(res, 'User context not found in stateless request session', 401);
     }
-    // Return the user mapped statelessly from the decoded Firebase token in authMiddleware
-    res.json({
-      success: true,
-      data: req.user
-    });
+    sendSuccess(res, req.user);
   } catch (error) {
-    console.error('Get Me Error:', error.message);
-    next(error);
+    handleControllerError(res, error, 'Failed to get user');
   }
 };
 
@@ -34,13 +30,9 @@ exports.getMe = async (req, res, next) => {
 // @access  Private
 exports.logout = async (req, res, next) => {
   try {
-    res.json({
-      success: true,
-      message: 'Logged out successfully'
-    });
+    sendSuccess(res, null, 200, 'Logged out successfully');
   } catch (error) {
-    console.error('Logout Error:', error.message);
-    next(error);
+    handleControllerError(res, error, 'Failed to logout');
   }
 };
 
@@ -53,7 +45,7 @@ exports.forgotPassword = async (req, res, next) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return next(new ApiError(404, 'There is no user with that email'));
+      return sendError(res, 'There is no user with that email', 404);
     }
 
     // Generate 6-digit OTP
@@ -75,13 +67,13 @@ exports.forgotPassword = async (req, res, next) => {
         message
       });
 
-      res.status(200).json({ success: true, data: 'Email sent' });
+      sendSuccess(res, 'Email sent', 200);
     } catch (err) {
       await OTP.deleteMany({ email });
-      return next(new ApiError(500, 'Email could not be sent'));
+      return sendError(res, 'Email could not be sent', 500);
     }
   } catch (error) {
-    next(error);
+    handleControllerError(res, error, 'Failed to process forgot password');
   }
 };
 
@@ -93,18 +85,18 @@ exports.verifyOTP = async (req, res, next) => {
     const { email, otp, newPassword } = req.body;
 
     if (!otp || !/^\d{6}$/.test(otp)) {
-      return next(new ApiError(400, 'OTP must be exactly 6 numeric digits'));
+      return sendError(res, 'OTP must be exactly 6 numeric digits', 400);
     }
 
     const otpRecord = await OTP.findOne({ email, otp });
 
     if (!otpRecord) {
-      return next(new ApiError(400, 'Invalid or expired OTP'));
+      return sendError(res, 'Invalid or expired OTP', 400);
     }
 
     const user = await User.findOne({ email });
     if (!user) {
-      return next(new ApiError(404, 'User not found'));
+      return sendError(res, 'User not found', 404);
     }
 
     user.password = newPassword;
@@ -121,14 +113,11 @@ exports.verifyOTP = async (req, res, next) => {
       console.warn(`[Firebase Auth Warning] Could not sync password reset to Firebase: ${fbErr.message}`);
     }
 
-    await OTP.deleteMany({ email }); // Delete OTPs for this email after success
+    await OTP.deleteMany({ email });
 
-    res.status(200).json({
-      success: true,
-      message: 'Password reset successful',
-    });
+    sendSuccess(res, null, 200, 'Password reset successful');
   } catch (error) {
-    next(error);
+    handleControllerError(res, error, 'Failed to verify OTP');
   }
 };
 
@@ -139,12 +128,12 @@ exports.refreshToken = async (req, res, next) => {
   try {
     const { token } = req.body;
     if (!token) {
-      return next(new ApiError(400, 'Refresh token is required'));
+      return sendError(res, 'Refresh token is required', 400);
     }
 
     const activeToken = await RefreshToken.findOne({ token, revoked: false });
     if (!activeToken || activeToken.expiresAt < new Date()) {
-      return next(new ApiError(403, 'Invalid or expired refresh token'));
+      return sendError(res, 'Invalid or expired refresh token', 403);
     }
 
     // Mark current refresh token as revoked (rotation)
@@ -153,7 +142,7 @@ exports.refreshToken = async (req, res, next) => {
 
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
-      throw new ApiError(500, 'JWT_SECRET environment variable is not configured');
+      return sendError(res, 'JWT_SECRET environment variable is not configured', 500);
     }
     const newAccessToken = jwt.sign({ id: activeToken.userId }, jwtSecret, { expiresIn: '15m' });
     const newRefreshTokenString = crypto.randomBytes(40).toString('hex');
@@ -164,12 +153,11 @@ exports.refreshToken = async (req, res, next) => {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     });
 
-    res.status(200).json({
-      success: true,
+    sendSuccess(res, {
       accessToken: newAccessToken,
       refreshToken: newRefreshTokenString
-    });
+    }, 200, 'Token refreshed successfully');
   } catch (error) {
-    next(error);
+    handleControllerError(res, error, 'Failed to refresh token');
   }
 };

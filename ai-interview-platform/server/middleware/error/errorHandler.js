@@ -1,9 +1,4 @@
-/**
- * Centralized Express Error-Handling Middleware
- * ─────────────────────────────────────────────
- * Catches all unhandled errors thrown or forwarded via next(err) across
- * every route and middleware in the application.
- */
+const { sendError } = require('../../utils/apiResponse');
 
 class ApiError extends Error {
   constructor(statusCode, message, details = null) {
@@ -17,19 +12,10 @@ class ApiError extends Error {
   }
 }
 
-/**
- * Handles requests that do not match any registered route.
- */
 const notFoundHandler = (req, res, _next) => {
-  res.status(404).json({
-    success: false,
-    message: `Route not found: ${req.method} ${req.originalUrl}`,
-  });
+  sendError(res, `Route not found: ${req.method} ${req.originalUrl}`, 404);
 };
 
-/**
- * Global error-catching middleware.
- */
 const globalErrorHandler = (err, req, res, _next) => {
   const statusCode = err.statusCode || err.status || 500;
   const isServerError = statusCode >= 500;
@@ -54,21 +40,14 @@ const globalErrorHandler = (err, req, res, _next) => {
     console.warn('[ErrorHandler] Client error:', logPayload);
   }
 
-  const responseBody = {
-    success: false,
-    message: isServerError ? 'Internal Server Error' : (err.message || 'An error occurred'),
-    ...(err.details && { details: err.details })
-  };
+  const message = isServerError ? 'Internal Server Error' : (err.message || 'An error occurred');
+  const details = err.details || undefined;
 
   if (process.env.NODE_ENV === 'development') {
-    responseBody.stack = err.stack;
+    sendError(res, message, statusCode, details);
+  } else {
+    sendError(res, message, statusCode, details);
   }
-
-  if (res.headersSent) {
-    return;
-  }
-
-  res.status(statusCode).json(responseBody);
 };
 
 module.exports = { ApiError, notFoundHandler, globalErrorHandler };

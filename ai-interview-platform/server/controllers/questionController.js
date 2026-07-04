@@ -1,16 +1,14 @@
 const SandboxRunner = require('../utils/sandboxRunner');
 const { generateCategorizedQuestions } = require('../services/ollamaService');
 const { ApiError } = require('../middleware/error/errorHandler');
+const { sendSuccess, sendError, handleControllerError } = require('../utils/apiResponse');
 
-// @desc    Generate dynamic technical, HR and coding questions using Ollama LLM
-// @route   POST /api/interview/questions
-// @access  Private
 exports.generateQuestion = async (req, res, next) => {
   try {
     const { role, difficulty, experience, jobDescription, resumeSkills } = req.body;
 
     if (!role || !experience) {
-      throw new ApiError(400, 'Please specify target role and experience');
+      return sendError(res, 'Please specify target role and experience', 400);
     }
 
     console.log(`[AI Question Generator] Generating dynamic questions for ${role}`);
@@ -21,17 +19,13 @@ exports.generateQuestion = async (req, res, next) => {
       jobDescription: jobDescription || '',
     });
 
-    res.json({
-      success: true,
-      data: {
-        role,
-        difficulty: difficulty || 'Medium',
-        experience,
-        ...categorizedQuestions
-      }
+    sendSuccess(res, {
+      role,
+      difficulty: difficulty || 'Medium',
+      experience,
+      ...categorizedQuestions
     });
   } catch (error) {
-    console.error('AI Question Generation Route Error:', error.message);
-    next(error);
+    handleControllerError(res, error, 'Failed to generate questions');
   }
 };
