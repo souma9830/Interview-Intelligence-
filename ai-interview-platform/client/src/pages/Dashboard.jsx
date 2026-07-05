@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, Plus, Loader2 } from 'lucide-react';
+import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, Plus } from 'lucide-react';
 import { SkeletonCard, SkeletonStatCard, SkeletonTable } from '../components/Common/Skeleton';
-import { EmptyState } from '../components/Common/EmptyState';
-import { ErrorMessage } from '../components/Common/ErrorMessage';
-import { LoadingOverlay } from '../components/Common/LoadingOverlay';
+import { Pagination } from '../components/Common/Pagination';
+
+const ITEMS_PER_PAGE = 5;
 
 export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [reports, setReports] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [scheduleForm, setScheduleForm] = useState({ role: 'Frontend Engineer', scheduledAt: '', durationMinutes: 45, notes: '' });
-  const [scheduleError, setScheduleError] = useState('');
-  const [scheduleSuccess, setScheduleSuccess] = useState('');
+  const [scheduleStatus, setScheduleStatus] = useState('');
+  const [reportPage, setReportPage] = useState(1);
+  const [schedulePage, setSchedulePage] = useState(1);
 
   const fetchReportsData = useCallback(async (signal) => {
     const token = localStorage.getItem('camsense_token') || 'demo_token_active';
@@ -152,7 +153,9 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
             <EmptyState icon={null} title="No upcoming sessions" message="Schedule your first mock interview above." />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {schedules.slice(0, 4).map(schedule => (
+              {(() => {
+                const start = (schedulePage - 1) * ITEMS_PER_PAGE;
+                return schedules.slice(start, start + ITEMS_PER_PAGE).map(schedule => (
                 <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
                   <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} • {schedule.durationMinutes} min</span>
@@ -174,8 +177,10 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
                     {new Date(schedule.scheduledAt).getTime() > Date.now() ? 'Starts later' : 'Start Session'}
                   </button>
                 </div>
-              ))}
+              );
+            })}
             </div>
+            <Pagination currentPage={schedulePage} totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)} onPageChange={setSchedulePage} />
           )}
         </div>
       </div>
@@ -223,7 +228,9 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
             </h2>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {reports.map((r) => (
+              {(() => {
+                const start = (reportPage - 1) * ITEMS_PER_PAGE;
+                return reports.slice(start, start + ITEMS_PER_PAGE).map((r) => (
                 <div
                   key={r._id}
                   style={{
@@ -259,8 +266,10 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
                     View Report <ChevronRight size={12} />
                   </button>
                 </div>
-              ))}
+              );
+            })}
             </div>
+            <Pagination currentPage={reportPage} totalPages={Math.ceil(reports.length / ITEMS_PER_PAGE)} onPageChange={setReportPage} />
           </div>
 
         </div>
