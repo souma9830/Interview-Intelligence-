@@ -7,6 +7,8 @@ import Signup from './pages/Signup';
 import Landing from './pages/Landing';
 import { ToastProvider } from './components/Common/ToastProvider';
 import { Loader2 } from 'lucide-react';
+import OfflineBanner from './components/Common/OfflineBanner';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
@@ -26,6 +28,7 @@ function LoadingScreen({ message = 'Loading workspace...' }) {
 }
 
 export default function App() {
+  const isOnline = useOnlineStatus();
   const [token, setToken] = useState(localStorage.getItem('camsense_token') || '');
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(!!token);
@@ -96,20 +99,19 @@ export default function App() {
   const isAuthPage = currentTab === 'login' || currentTab === 'signup' || currentTab === 'landing' || currentTab === 'forgot-password' || currentTab === 'verify-otp';
 
   return (
-    <ToastProvider>
-      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-app)', fontFamily: 'Inter, sans-serif', color: 'var(--color-text)', transition: 'background 0.3s, color 0.3s' }}>
-        <a href="#main-content" className="skip-link" style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: 9999, padding: '8px 16px', background: '#fff', color: '#000', fontSize: '14px', fontWeight: '600', textDecoration: 'none' }}>
-          Skip to main content
-        </a>
-        {!isAuthPage && <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} user={user} globalState={globalState} onLogout={handleLogout} />}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          {!isAuthPage && <Navbar />}
-          <main id="main-content" role="main" aria-label="Main content" style={{ flex: 1, overflowY: 'auto', padding: isAuthPage ? '0' : '28px 32px', display: isAuthPage ? 'flex' : 'block', alignItems: isAuthPage ? 'center' : undefined, justifyContent: isAuthPage ? 'center' : undefined }}>
-            <Suspense fallback={<LoadingScreen message="Loading assessment workspace..." />}>
-              {renderContent()}
-            </Suspense>
-          </main>
-        </div>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-app)', fontFamily: 'Inter, sans-serif', color: 'var(--color-text)', transition: 'background 0.3s, color 0.3s' }}>
+      <a href="#main-content" className="skip-link" style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: 9999, padding: '8px 16px', background: '#fff', color: '#000', fontSize: '14px', fontWeight: '600', textDecoration: 'none' }}>
+        Skip to main content
+      </a>
+      {!isAuthPage && <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} user={user} globalState={globalState} onLogout={handleLogout} />}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <OfflineBanner isOnline={isOnline} />
+        {!isAuthPage && <Navbar />}
+        <main id="main-content" role="main" aria-label="Main content" style={{ flex: 1, overflowY: 'auto', padding: isAuthPage ? '0' : '28px 32px', display: isAuthPage ? 'flex' : 'block', alignItems: isAuthPage ? 'center' : undefined, justifyContent: isAuthPage ? 'center' : undefined }}>
+          <Suspense fallback={<LoadingScreen message="Loading assessment workspace..." />}>
+            {renderContent()}
+          </Suspense>
+        </main>
       </div>
     </ToastProvider>
   );
