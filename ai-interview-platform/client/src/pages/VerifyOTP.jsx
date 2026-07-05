@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Loader2, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { isValidNumeric } from '../utils/sanitize';
+import { useToast } from '../hooks/useToast';
 
 const inp = (err) => ({ width: '100%', background: '#0d0d0d', border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`, borderRadius: '8px', padding: '10px 12px 10px 38px', fontSize: '14px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box', transition: 'border-color 0.15s' });
 
@@ -10,8 +11,8 @@ export default function VerifyOTP({ setCurrentTab }) {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [toast, setToast] = useState(null);
   const [email, setEmail] = useState('');
+  const { addToast } = useToast();
 
   useEffect(() => {
     const storedEmail = localStorage.getItem('reset_email');
@@ -21,8 +22,6 @@ export default function VerifyOTP({ setCurrentTab }) {
       setCurrentTab('forgot-password');
     }
   }, [setCurrentTab]);
-
-  const showToast = (msg, type = 'ok') => { setToast({ msg, type }); setTimeout(() => setToast(null), 4000); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,7 +49,7 @@ export default function VerifyOTP({ setCurrentTab }) {
       const data = await res.json();
       
       if (data.success) {
-        showToast('Password reset successfully!');
+        addToast('Password reset successfully!');
         setTimeout(() => {
           localStorage.removeItem('reset_email');
           setCurrentTab('login');
@@ -67,11 +66,6 @@ export default function VerifyOTP({ setCurrentTab }) {
 
   return (
     <div style={{ width: '100%', maxWidth: '400px', padding: '0 16px', fontFamily: 'Inter, sans-serif' }}>
-      {toast && (
-        <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 100, background: toast.type === 'ok' ? '#14532d' : '#7f1d1d', border: `1px solid ${toast.type === 'ok' ? '#22c55e' : '#ef4444'}`, color: '#fff', padding: '10px 16px', borderRadius: '8px', fontSize: '13px' }}>
-          {toast.msg}
-        </div>
-      )}
 
       <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '32px' }}>
         <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#fff', margin: '0 0 4px' }}>Verify OTP</h2>
