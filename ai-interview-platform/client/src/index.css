@@ -72,3 +72,7 @@ button { font-family: 'Inter', sans-serif; }
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+@keyframes toastSlideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}

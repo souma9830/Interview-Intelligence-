@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, AlertCircle, RefreshCw, Plus } from 'lucide-react';
 import { SkeletonCard, SkeletonStatCard, SkeletonTable } from '../components/Common/Skeleton';
+import { useToast } from '../hooks/useToast';
 
 export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [reports, setReports] = useState([]);
@@ -9,6 +10,7 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [scheduleForm, setScheduleForm] = useState({ role: 'Frontend Engineer', scheduledAt: '', durationMinutes: 45, notes: '' });
   const [scheduleStatus, setScheduleStatus] = useState('');
+  const { addToast } = useToast();
 
   const fetchReports = async () => {
     setLoading(true);
