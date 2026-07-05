@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Video, Camera, Play, AlertTriangle } from 'lucide-react';
 import VideoRecorder from '../components/Telemetry/VideoRecorder';
+import Modal from '../components/Common/Modal';
 import { STANDARD_AUDIO_CONSTRAINTS } from '../utils/audioConstraints';
 import { getAuthHeader } from '../utils/authHeaders';
 import { useProctor } from '../hooks/useProctor';
@@ -323,25 +324,21 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     <div style={{ fontFamily: "'Inter', sans-serif", color: '#e8e8e8', position: 'relative' }}>
 
       {/* Start Overlay */}
-      {!hasStarted && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.92)', borderRadius: '16px', backdropFilter: 'blur(8px)' }}>
-          <div style={{ background: '#111', border: '1px solid #2a2a2a', borderRadius: '16px', padding: '48px', maxWidth: '520px', width: '100%', textAlign: 'center' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-              <Play size={28} color="#fff" />
-            </div>
-            <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#fff', margin: '0 0 12px' }}>Ready for your interview?</h2>
-            <p style={{ fontSize: '15px', color: '#888', lineHeight: '1.6', margin: '0 0 32px' }}>
-              Your webcam and microphone are ready. The AI interviewer will ask you questions based on your profile. Answer each one to proceed.
-            </p>
-            <button
-              onClick={handleBeginSession}
-              style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-            >
-              Begin Session <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={!hasStarted}
+        title="Ready for your interview?"
+        description="Your webcam and microphone are ready. The AI interviewer will ask you questions based on your profile. Answer each one to proceed."
+        icon={<Play size={28} color="#fff" />}
+        width="520px"
+        footer={
+          <button
+            onClick={handleBeginSession}
+            style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            Begin Session <ChevronRight size={16} />
+          </button>
+        }
+      />
 
       {/* Session Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', background: '#111', border: '1px solid #222', borderRadius: '10px', marginBottom: '20px' }}>
@@ -525,30 +522,28 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
       `}</style>
 
       {/* Cheat Warning Overlay */}
-      {isCheatWarningVisible && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(10px)' }}>
-          <div style={{ background: '#111', border: '1px solid #ff4444', borderRadius: '16px', padding: '48px', maxWidth: '520px', width: '100%', textAlign: 'center', boxShadow: '0 0 40px rgba(255, 68, 68, 0.1)' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#270e0f', border: '1px solid #ff4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-              <AlertTriangle size={28} color="#ff4444" />
-            </div>
-            <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#fff', margin: '0 0 12px' }}>Suspicious Activity Detected</h2>
-            <p style={{ fontSize: '15px', color: '#aaa', lineHeight: '1.6', margin: '0 0 32px' }}>
-              You have exited fullscreen mode or switched tabs. This activity has been recorded and will negatively impact your final evaluation score. Please remain focused on the session.
-            </p>
-            <button
-              onClick={async () => {
-                try { await document.documentElement.requestFullscreen(); } catch (err) {}
-                setIsCheatWarningVisible(false);
-                if (window.speechSynthesis) window.speechSynthesis.resume();
-                setTimerActive(true);
-              }}
-              style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-            >
-              Resume Session <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={isCheatWarningVisible}
+        title="Suspicious Activity Detected"
+        description="You have exited fullscreen mode or switched tabs. This activity has been recorded and will negatively impact your final evaluation score. Please remain focused on the session."
+        variant="danger"
+        icon={<AlertTriangle size={28} color="#ff4444" />}
+        iconBg="#270e0f"
+        iconBorder="#ff4444"
+        footer={
+          <button
+            onClick={async () => {
+              try { await document.documentElement.requestFullscreen(); } catch (err) {}
+              setIsCheatWarningVisible(false);
+              if (window.speechSynthesis) window.speechSynthesis.resume();
+              setTimerActive(true);
+            }}
+            style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            Resume Session <ChevronRight size={16} />
+          </button>
+        }
+      />
     </div>
   );
 }
