@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Lock, Loader2, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { ErrorMessage } from '../components/Common/ErrorMessage';
 import { isValidNumeric } from '../utils/sanitize';
 import { useToast } from '../hooks/useToast';
 
@@ -90,7 +91,7 @@ export default function VerifyOTP({ setCurrentTab }) {
                 {show ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
-            {error && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{error}</p>}
+            {error && <ErrorMessage message={error} />}
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '8px', width: '100%', padding: '11px', background: loading ? '#1a1a1a' : '#fff', color: loading ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s ease' }}>

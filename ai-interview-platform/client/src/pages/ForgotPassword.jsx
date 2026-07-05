@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
-import { useToast } from '../hooks/useToast';
+import { ErrorMessage } from '../components/Common/ErrorMessage';
 
 const inp = (err) => ({ width: '100%', background: '#0d0d0d', border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`, borderRadius: '8px', padding: '10px 12px 10px 38px', fontSize: '14px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box', transition: 'border-color 0.15s' });
 
@@ -60,7 +60,7 @@ export default function ForgotPassword({ setCurrentTab }) {
               <Mail size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} />
               <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); setError(''); }} style={inp(error)} />
             </div>
-            {error && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{error}</p>}
+            {error && <ErrorMessage message={error} style={{ marginTop: '4px' }} />}
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '8px', width: '100%', padding: '11px', background: loading ? '#1a1a1a' : '#fff', color: loading ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s ease' }}>
