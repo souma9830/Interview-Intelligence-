@@ -1,11 +1,14 @@
-import React, { Suspense, lazy, useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Navbar/Sidebar';
 import Navbar from './components/Navbar/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Landing from './pages/Landing';
-import { LoadingOverlay } from './components/Common/LoadingOverlay';
+import { ToastProvider } from './components/Common/ToastProvider';
+import { Loader2 } from 'lucide-react';
+import { useKeyboardShortcuts, useShortcutsDialog } from './hooks/useKeyboardShortcuts';
+import { KeyboardShortcutsDialog } from './components/Common/KeyboardShortcutsDialog';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
@@ -39,6 +42,28 @@ export default function App() {
     completedTime: '',
     violationCount: 0,
   });
+
+  const isAuthPage = currentTab === 'login' || currentTab === 'signup' || currentTab === 'landing' || currentTab === 'forgot-password' || currentTab === 'verify-otp';
+
+  const shortcutsDialog = useShortcutsDialog();
+
+  const navigateTo = useCallback((tab) => {
+    setCurrentTab(tab);
+    if (!isAuthPage && tab !== currentTab) {
+      shortcutsDialog.close();
+    }
+  }, [currentTab, isAuthPage, shortcutsDialog]);
+
+  const appShortcuts = useMemo(() => ({
+    '?': { label: 'Toggle keyboard shortcuts help', category: 'General', onPress: shortcutsDialog.toggle },
+    'h': { label: 'Go to Home', category: 'Navigation', onPress: () => navigateTo('home') },
+    'd': { label: 'Go to Dashboard', category: 'Navigation', onPress: () => navigateTo('dashboard') },
+    's': { label: 'Go to Interview Setup', category: 'Navigation', onPress: () => navigateTo('setup') },
+    'r': { label: 'Go to Results', category: 'Navigation', onPress: () => navigateTo('result') },
+    'Escape': { label: 'Close dialog or cancel', category: 'General', onPress: shortcutsDialog.close },
+  }), [shortcutsDialog, navigateTo]);
+
+  const registeredShortcuts = useKeyboardShortcuts(appShortcuts, !isAuthPage);
 
   useEffect(() => {
     if (token) {
@@ -83,8 +108,6 @@ export default function App() {
     return <LoadingOverlay message="Verifying session..." fullPage />;
   }
 
-  const isAuthPage = currentTab === 'login' || currentTab === 'signup' || currentTab === 'landing' || currentTab === 'forgot-password' || currentTab === 'verify-otp';
-
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-app)', fontFamily: 'Inter, sans-serif', color: 'var(--color-text)', transition: 'background 0.3s, color 0.3s' }}>
       <a href="#main-content" className="skip-link" style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: 9999, padding: '8px 16px', background: '#fff', color: '#000', fontSize: '14px', fontWeight: '600', textDecoration: 'none' }}>
@@ -100,6 +123,7 @@ export default function App() {
           </Suspense>
         </main>
       </div>
-    </ToastProvider>
+      <KeyboardShortcutsDialog isOpen={shortcutsDialog.isOpen} onClose={shortcutsDialog.close} shortcuts={registeredShortcuts} />
+    </div>
   );
 }
