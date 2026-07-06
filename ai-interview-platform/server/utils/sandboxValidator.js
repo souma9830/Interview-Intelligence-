@@ -4,6 +4,8 @@ const {
   EXECUTION_LIMITS,
   SUPPORTED_LANGUAGES,
 } = require('../config/sandboxConfig');
+const { containsSuspiciousKeyword } = require('./sandboxRules');
+const { sanitizeSandboxScript } = require('./sandboxSanitizer');
 
 /**
  * SandboxValidator
@@ -32,10 +34,11 @@ class SandboxValidator {
    * @returns {{ safe: boolean, violations: Array<{ rule: string, detail: string }>, meta: object }}
    */
   static validate(code, language) {
+    const sanitizedCode = sanitizeSandboxScript(code);
     const violations = [];
 
     // Guard: reject empty or missing submissions
-    if (!code || typeof code !== 'string') {
+    if (!sanitizedCode) {
       return {
         safe: false,
         violations: [{ rule: 'empty_submission', detail: 'No code was provided for validation.' }],
@@ -43,13 +46,20 @@ class SandboxValidator {
       };
     }
 
+    if (containsSuspiciousKeyword(sanitizedCode)) {
+      violations.push({
+        rule: 'suspicious_keyword',
+        detail: 'Code contains blocked runtime command sequences or process hooks.',
+      });
+    }
+
     // Guard: reject oversized submissions to prevent regex backtracking abuse
-    if (code.length > EXECUTION_LIMITS.maxCodeLengthChars) {
+    if (sanitizedCode.length > EXECUTION_LIMITS.maxCodeLengthChars) {
       violations.push({
         rule: 'code_length_exceeded',
         detail: `Submitted code exceeds the maximum allowed length of ${EXECUTION_LIMITS.maxCodeLengthChars} characters.`,
       });
-      return { safe: false, violations, meta: { codeLength: code.length, language } };
+      return { safe: false, violations, meta: { codeLength: sanitizedCode.length, language } };
     }
 
     // Guard: reject unsupported languages
@@ -62,9 +72,9 @@ class SandboxValidator {
 
     // Scan for forbidden patterns using the regex definitions
     for (const entry of FORBIDDEN_PATTERNS) {
-      if (entry.pattern.test(code)) {
+      if (entry.pattern.test(sanitizedCode)) {
         violations.push({
-          rule: entry.label,
+          rule: entry.label === 'eval_usage' ? 'eval_call' : entry.label,
           detail: `Code contains a forbidden pattern: ${entry.label.replace(/_/g, ' ')}.`,
         });
       }
@@ -72,7 +82,7 @@ class SandboxValidator {
 
     // Scan for explicit blocked module references in require() calls
     // This catches cases the general regex might not fully cover
-    const requireMatches = code.matchAll(/require\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g);
+    const requireMatches = sanitizedCode.matchAll(/require\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g);
     for (const match of requireMatches) {
       const moduleName = match[1];
       if (BLOCKED_MODULES.includes(moduleName) && !violations.some(v => v.rule === 'blocked_module_import')) {
@@ -86,14 +96,14 @@ class SandboxValidator {
     // Scan for obfuscation attempts via hex or unicode escapes of blocked keywords
     const hexObfuscationPattern = /\\x[0-9a-fA-F]{2}/;
     const unicodeObfuscationPattern = /\\u[0-9a-fA-F]{4}/;
-    if (hexObfuscationPattern.test(code) || unicodeObfuscationPattern.test(code)) {
+    if (hexObfuscationPattern.test(sanitizedCode) || unicodeObfuscationPattern.test(sanitizedCode)) {
       // Only flag if the decoded version would match a blocked pattern
       let decoded;
       try {
-        decoded = code.replace(/\\x([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+        decoded = sanitizedCode.replace(/\\x([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
         decoded = decoded.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
       } catch (_err) {
-        decoded = code;
+        decoded = sanitizedCode;
       }
 
       for (const entry of FORBIDDEN_PATTERNS) {
@@ -110,7 +120,7 @@ class SandboxValidator {
       safe: violations.length === 0,
       violations,
       meta: {
-        codeLength: code.length,
+        codeLength: sanitizedCode.length,
         language: language || 'unknown',
         patternsChecked: FORBIDDEN_PATTERNS.length,
         blockedModulesChecked: BLOCKED_MODULES.length,

@@ -20,9 +20,18 @@ class SandboxRunner {
    * @returns {Promise<{output?: string, error?: string}>} Result object with output or error.
    */
   static runCode(code, language = 'javascript', timeout = 5000) {
+    const SandboxValidator = require('./sandboxValidator');
+    const { sanitizeSandboxScript } = require('./sandboxSanitizer');
+    
     return new Promise((resolve) => {
       if (language !== 'javascript') {
         return resolve({ error: 'Language not supported' });
+      }
+
+      const sanitized = sanitizeSandboxScript(code);
+      const valResult = SandboxValidator.validate(sanitized, language);
+      if (!valResult.safe) {
+        return resolve({ error: `Security Violation: ${valResult.violations.map(v => v.detail).join(' ')}` });
       }
 
       const child = exec('node', { timeout }, (err, stdout, stderr) => {
@@ -36,7 +45,7 @@ class SandboxRunner {
       });
 
       if (child.stdin) {
-        child.stdin.write(code);
+        child.stdin.write(sanitized);
         child.stdin.end();
       }
     });
