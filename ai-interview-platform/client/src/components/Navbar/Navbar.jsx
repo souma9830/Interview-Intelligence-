@@ -3,6 +3,8 @@ import { Activity } from 'lucide-react';
 import ThemeToggler from '../Common/ThemeToggler';
 
 export default function Navbar() {
+  const isMobile = useMediaQuery('(max-width: 768px)');
+
   return (
     <header style={{ height: '52px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', flexShrink: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
