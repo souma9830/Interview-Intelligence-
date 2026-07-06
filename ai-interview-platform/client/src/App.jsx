@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Landing from './pages/Landing';
 import { Loader2 } from 'lucide-react';
+import { useDarkMode } from './hooks/useDarkMode';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
@@ -25,6 +26,7 @@ function LoadingScreen({ message = 'Loading workspace...' }) {
 }
 
 export default function App() {
+  useDarkMode();
   const [token, setToken] = useState(localStorage.getItem('camsense_token') || '');
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(!!token);
