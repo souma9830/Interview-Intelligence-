@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { auth, googleProvider } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { useToast } from '../hooks/useToast';
+import { useToast } from '../components/Common/ToastContext';
 
 const inp = (err) => ({ width: '100%', background: '#0d0d0d', border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`, borderRadius: '8px', padding: '10px 12px 10px 38px', fontSize: '14px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box', transition: 'border-color 0.15s' });
 
@@ -13,7 +13,7 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const { addToast } = useToast();
+  const toast = useToast();
 
   const validate = () => {
     const e = {};
@@ -36,7 +36,7 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
 
       const token = await fbUser.getIdToken();
       
-      addToast('Account created!');
+      toast.show('Account created!', 'success');
       setTimeout(() => { 
         localStorage.setItem('camsense_token', token); 
         setToken(token); 
@@ -45,11 +45,11 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       }, 1200);
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
-        addToast('Email already in use', 'err');
+        toast.show('Email already in use', 'error');
       } else if (err.code === 'auth/weak-password') {
-        addToast('Password is too weak', 'err');
+        toast.show('Password is too weak', 'error');
       } else {
-        addToast('Registration failed. Check connection.', 'err'); 
+        toast.show('Registration failed. Check connection.', 'error'); 
       }
     }
     finally { setTimeout(() => setLoading(false), 1200); }
@@ -61,7 +61,7 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
 
-      addToast('Account created with Google!');
+      toast.show('Account created with Google!', 'success');
       setTimeout(() => { 
         localStorage.setItem('camsense_token', token); 
         setToken(token); 
@@ -69,7 +69,7 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
         setCurrentTab('home'); 
       }, 1200);
     } catch (err) {
-      addToast('Google sign-up was cancelled or failed.', 'err');
+      toast.show('Google sign-up was cancelled or failed.', 'error');
     }
   };
 

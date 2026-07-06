@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Sparkles, Code, Compass, AlertCircle, GraduationCap, FileText } from 'lucide-react';
 import { useMediaDevices } from '../hooks/useMediaDevices';
 import QuestionInputCard from '../components/Telemetry/QuestionInputCard';
-import { sanitizeForDisplay } from '../utils/sanitize';
+import { sanitizeForDisplay } from '../utils/security';
+import { useToast } from '../components/Common/ToastContext';
 
 const S = {
   card: { background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -14,6 +15,7 @@ const S = {
 };
 
 export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
+  const toast = useToast();
   const [role, setRole] = useState('Frontend Engineer');
   const [experience, setExperience] = useState('Mid-level (2-5 yrs)');
   const [resumeUploaded, setResumeUploaded] = useState(false);
@@ -135,6 +137,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
       setUploadProgress(100);
       const json = await res.json();
       if (json.success && json.data) {
+        toast.show('Resume uploaded & parsed successfully!', 'success');
         setTimeout(() => {
           setResumeUploaded(true);
           setResumeName(file.name);
@@ -144,11 +147,14 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
         }, 600);
       } else {
         setIsUploading(false);
-        setErrorMessage(json.message || 'Error processing uploaded file');
+        const err = json.message || 'Error processing uploaded file';
+        setErrorMessage(err);
+        toast.show(err, 'error');
       }
     } catch {
       setIsUploading(false);
       setErrorMessage('Network timeout. Server status is offline.');
+      toast.show('Network error. Upload failed.', 'error');
     }
   };
 
