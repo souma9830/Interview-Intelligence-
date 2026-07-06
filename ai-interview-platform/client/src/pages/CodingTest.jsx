@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Code2, Terminal, Play, ChevronRight, FileCode, RefreshCw, Mic, MicOff, AlertCircle, Award } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { useProctor } from '../hooks/useProctor';
+import { LoadingOverlay } from '../components/Common/LoadingOverlay';
 
 const LANGUAGE_BOILERPLATES = {
   javascript: {
@@ -453,7 +454,7 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
                   scrollBeyondLastLine: false,
                   cursorBlinking: "smooth",
                 }}
-                loading={<div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontSize: '12px' }}>Initializing Editor…</div>}
+                loading={<LoadingOverlay message="Initializing Editor..." />}
               />
             </div>
           </div>
@@ -553,28 +554,26 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
       </div>
 
       {/* Cheat Warning Overlay */}
-      {isCheatWarningVisible && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(10px)' }}>
-          <div style={{ background: '#111', border: '1px solid #ff4444', borderRadius: '16px', padding: '48px', maxWidth: '520px', width: '100%', textAlign: 'center', boxShadow: '0 0 40px rgba(255, 68, 68, 0.1)' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#270e0f', border: '1px solid #ff4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-              <AlertCircle size={28} color="#ff4444" />
-            </div>
-            <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#fff', margin: '0 0 12px' }}>Assessment Integrity Warning</h2>
-            <p style={{ fontSize: '15px', color: '#aaa', lineHeight: '1.6', margin: '0 0 32px' }}>
-              You have exited fullscreen mode or switched tabs during the coding assessment. This violation has been logged and will negatively impact your technical score.
-            </p>
-            <button
-              onClick={async () => {
-                try { await document.documentElement.requestFullscreen(); } catch (err) {}
-                setIsCheatWarningVisible(false);
-              }}
-              style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-            >
-              Resume Coding Test <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={isCheatWarningVisible}
+        title="Assessment Integrity Warning"
+        description="You have exited fullscreen mode or switched tabs during the coding assessment. This violation has been logged and will negatively impact your technical score."
+        variant="danger"
+        icon={<AlertCircle size={28} color="#ff4444" />}
+        iconBg="#270e0f"
+        iconBorder="#ff4444"
+        footer={
+          <button
+            onClick={async () => {
+              try { await document.documentElement.requestFullscreen(); } catch (err) {}
+              setIsCheatWarningVisible(false);
+            }}
+            style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            Resume Coding Test <ChevronRight size={16} />
+          </button>
+        }
+      />
 
     </div>
   );

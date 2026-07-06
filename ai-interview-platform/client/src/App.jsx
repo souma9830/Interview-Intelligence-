@@ -1,10 +1,11 @@
-import React, { Suspense, lazy, useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Navbar/Sidebar';
 import Navbar from './components/Navbar/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Landing from './pages/Landing';
+import { ToastProvider } from './components/Common/ToastProvider';
 import { Loader2 } from 'lucide-react';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 import GuestRoute from './components/Common/GuestRoute';
@@ -18,21 +19,18 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const VerifyOTP = lazy(() => import('./pages/VerifyOTP'));
 
 function LoadingScreen({ message = 'Loading workspace...' }) {
-  return (
-    <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }} role="status" aria-label="Loading">
-      <Loader2 size={24} color="#555" style={{ animation: 'spin 1s linear infinite' }} aria-hidden="true" />
-      <p style={{ fontSize: '13px', color: '#555' }}>{message}</p>
-    </div>
-  );
+  return <LoadingOverlay message={message} />;
 }
 
 export default function App() {
+  const isOnline = useOnlineStatus();
   const [token, setToken] = useState(localStorage.getItem('camsense_token') || '');
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(!!token);
   const [currentTab, setCurrentTab] = useState(token ? 'home' : 'landing');
 
   const [globalState, setGlobalState] = useState({
+  const isMobile = useMediaQuery('(max-width: 768px)');
     role: 'Frontend Engineer',
     experience: 'Mid-level (2-5 yrs)',
     resumeUploaded: false,
@@ -45,6 +43,28 @@ export default function App() {
     completedTime: '',
     violationCount: 0,
   });
+
+  const isAuthPage = currentTab === 'login' || currentTab === 'signup' || currentTab === 'landing' || currentTab === 'forgot-password' || currentTab === 'verify-otp';
+
+  const shortcutsDialog = useShortcutsDialog();
+
+  const navigateTo = useCallback((tab) => {
+    setCurrentTab(tab);
+    if (!isAuthPage && tab !== currentTab) {
+      shortcutsDialog.close();
+    }
+  }, [currentTab, isAuthPage, shortcutsDialog]);
+
+  const appShortcuts = useMemo(() => ({
+    '?': { label: 'Toggle keyboard shortcuts help', category: 'General', onPress: shortcutsDialog.toggle },
+    'h': { label: 'Go to Home', category: 'Navigation', onPress: () => navigateTo('home') },
+    'd': { label: 'Go to Dashboard', category: 'Navigation', onPress: () => navigateTo('dashboard') },
+    's': { label: 'Go to Interview Setup', category: 'Navigation', onPress: () => navigateTo('setup') },
+    'r': { label: 'Go to Results', category: 'Navigation', onPress: () => navigateTo('result') },
+    'Escape': { label: 'Close dialog or cancel', category: 'General', onPress: shortcutsDialog.close },
+  }), [shortcutsDialog, navigateTo]);
+
+  const registeredShortcuts = useKeyboardShortcuts(appShortcuts, !isAuthPage);
 
   useEffect(() => {
     if (token) {
@@ -86,15 +106,8 @@ export default function App() {
   };
 
   if (checkingAuth) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', fontFamily: 'Inter, sans-serif' }} role="status" aria-label="Verifying authentication">
-        <Loader2 size={28} color="#555" style={{ animation: 'spin 1s linear infinite' }} aria-hidden="true" />
-        <p style={{ fontSize: '13px', color: '#555' }}>Verifying session…</p>
-      </div>
-    );
+    return <LoadingOverlay message="Verifying session..." fullPage />;
   }
-
-  const isAuthPage = currentTab === 'login' || currentTab === 'signup' || currentTab === 'landing' || currentTab === 'forgot-password' || currentTab === 'verify-otp';
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-app)', fontFamily: 'Inter, sans-serif', color: 'var(--color-text)', transition: 'background 0.3s, color 0.3s' }}>
@@ -103,13 +116,15 @@ export default function App() {
       </a>
       {!isAuthPage && <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} user={user} globalState={globalState} onLogout={handleLogout} />}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <OfflineBanner isOnline={isOnline} />
         {!isAuthPage && <Navbar />}
-        <main id="main-content" role="main" aria-label="Main content" style={{ flex: 1, overflowY: 'auto', padding: isAuthPage ? '0' : '28px 32px', display: isAuthPage ? 'flex' : 'block', alignItems: isAuthPage ? 'center' : undefined, justifyContent: isAuthPage ? 'center' : undefined }}>
+        <main id="main-content" role="main" aria-label="Main content" style={{ flex: 1, overflowY: 'auto', padding: isAuthPage ? '0' : isMobile ? '28px 12px' : '28px 32px', display: isAuthPage ? 'flex' : 'block', alignItems: isAuthPage ? 'center' : undefined, justifyContent: isAuthPage ? 'center' : undefined }}>
           <Suspense fallback={<LoadingScreen message="Loading assessment workspace..." />}>
             {renderContent()}
           </Suspense>
         </main>
       </div>
+      <KeyboardShortcutsDialog isOpen={shortcutsDialog.isOpen} onClose={shortcutsDialog.close} shortcuts={registeredShortcuts} />
     </div>
   );
 }

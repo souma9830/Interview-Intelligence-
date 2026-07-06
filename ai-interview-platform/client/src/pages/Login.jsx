@@ -164,10 +164,8 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState(null);
   const [errors, setErrors] = useState({});
-
-  const showToast = (msg, type = 'ok') => { setToast({ msg, type }); setTimeout(() => setToast(null), 4000); };
+  const { addToast } = useToast();
 
   const validate = () => {
     const e = {};
@@ -187,7 +185,7 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
-      showToast('Signed in successfully!');
+      addToast('Signed in successfully!');
       setTimeout(() => {
         localStorage.setItem('camsense_token', token);
         setToken(token);
@@ -196,9 +194,9 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       }, 1200);
     } catch (err) {
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        showToast('Invalid email or password', 'err');
+        addToast('Invalid email or password', 'err');
       } else {
-        showToast('Authentication failed. Check connection.', 'err');
+        addToast('Authentication failed. Check connection.', 'err');
       }
     }
     finally { setTimeout(() => setLoading(false), 1200); }
@@ -209,7 +207,7 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
-      showToast('Signed in with Google!');
+      addToast('Signed in with Google!');
       setTimeout(() => {
         localStorage.setItem('camsense_token', token);
         setToken(token);
@@ -217,13 +215,12 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
         setCurrentTab('home');
       }, 1200);
     } catch (err) {
-      showToast('Google sign-in was cancelled or failed.', 'err');
+      addToast('Google sign-in was cancelled or failed.', 'err');
     }
   };
 
   return (
     <div style={authPageContainer}>
-      {toast && <div style={toastContainer(toast.type)}>{toast.msg}</div>}
 
       <div style={card}>
         <h2 style={authHeader}>Sign in</h2>
