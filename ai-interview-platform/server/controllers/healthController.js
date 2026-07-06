@@ -1,4 +1,5 @@
 const { isDatabaseConnected } = require('../utils/database');
+const { sendSuccess, handleControllerError } = require('../utils/apiResponse');
 
 exports.getHealthStatus = async (req, res, next) => {
   try {
@@ -12,8 +13,8 @@ exports.getHealthStatus = async (req, res, next) => {
       },
       timestamp: new Date().toISOString()
     };
-    res.status(200).json({ success: true, data: health });
+    sendSuccess(res, health);
   } catch (error) {
-    next(error);
+    handleControllerError(res, error, 'Failed to get health status');
   }
 };
