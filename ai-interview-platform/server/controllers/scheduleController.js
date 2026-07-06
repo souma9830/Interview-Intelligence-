@@ -1,4 +1,5 @@
 const { getStorageAdapter } = require('../repositories/storageAdapter');
+const { sendSuccess, sendCreated, sendError, handleControllerError } = require('../utils/apiResponse');
 
 exports.getSchedule = async (req, res) => {
   try {
@@ -7,13 +8,12 @@ exports.getSchedule = async (req, res) => {
     if (storage && typeof storage.getSchedule === 'function') {
       const schedule = await storage.getSchedule(scheduleId);
       if (schedule) {
-        return res.json({ success: true, data: schedule });
+        return sendSuccess(res, schedule);
       }
     }
-    res.json({ success: true, scheduledAt: new Date(Date.now() + 300000).toISOString() });
+    sendSuccess(res, { scheduledAt: new Date(Date.now() + 300000).toISOString() });
   } catch (error) {
-    console.error('Get Schedule Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to retrieve schedule');
   }
 };
 
@@ -21,14 +21,13 @@ exports.listSchedules = async (req, res) => {
   try {
     const userId = req.user ? req.user._id || req.user.uid : null;
     if (!userId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
+      return sendError(res, 'Unauthorized', 401);
     }
     const storage = getStorageAdapter();
     const schedules = await storage.listSchedules(userId);
-    res.json({ success: true, data: schedules });
+    sendSuccess(res, schedules);
   } catch (error) {
-    console.error('List Schedules Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to list schedules');
   }
 };
 
@@ -36,7 +35,7 @@ exports.createSchedule = async (req, res) => {
   try {
     const { role, scheduledAt, durationMinutes, notes } = req.body;
     if (!role || !scheduledAt) {
-      return res.status(400).json({ success: false, message: 'Please specify role and scheduledAt' });
+      return sendError(res, 'Please specify role and scheduledAt', 400);
     }
     const userId = req.user ? req.user._id || req.user.uid : 'anonymous';
     const storage = getStorageAdapter();
@@ -47,9 +46,8 @@ exports.createSchedule = async (req, res) => {
       durationMinutes: durationMinutes || 45,
       notes: notes || '',
     });
-    res.status(201).json({ success: true, data: saved });
+    sendCreated(res, saved, 'Schedule created successfully');
   } catch (error) {
-    console.error('Create Schedule Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to create schedule');
   }
 };

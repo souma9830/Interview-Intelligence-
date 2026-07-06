@@ -1,4 +1,5 @@
 const { getStorageAdapter } = require('../repositories/storageAdapter');
+const { sendSuccess, sendCreated, sendError, handleControllerError } = require('../utils/apiResponse');
 
 exports.getReport = async (req, res) => {
   try {
@@ -6,12 +7,11 @@ exports.getReport = async (req, res) => {
     const storage = getStorageAdapter();
     const report = await storage.getReport(reportId);
     if (!report) {
-      return res.status(404).json({ success: false, message: 'Report not found' });
+      return sendError(res, 'Report not found', 404);
     }
-    res.json({ success: true, data: report });
+    sendSuccess(res, report);
   } catch (error) {
-    console.error('Get Report Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to retrieve report');
   }
 };
 
@@ -19,14 +19,13 @@ exports.listReports = async (req, res) => {
   try {
     const userId = req.user ? req.user._id || req.user.uid : null;
     if (!userId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
+      return sendError(res, 'Unauthorized', 401);
     }
     const storage = getStorageAdapter();
     const reports = await storage.listReports(userId);
-    res.json({ success: true, data: reports });
+    sendSuccess(res, reports);
   } catch (error) {
-    console.error('List Reports Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to list reports');
   }
 };
 
@@ -34,7 +33,7 @@ exports.synthesizeReport = async (req, res) => {
   try {
     const { interviewId, role, experience, questions, answers } = req.body;
     if (!interviewId && (!role || !experience)) {
-      return res.status(400).json({ success: false, message: 'Please provide interviewId or role and experience' });
+      return sendError(res, 'Please provide interviewId or role and experience', 400);
     }
     const { synthesizeInterviewReport } = require('../services/geminiService');
     const qaList = (questions || []).map((q, i) => ({
@@ -75,9 +74,8 @@ exports.synthesizeReport = async (req, res) => {
       experience,
       ...reportData,
     });
-    res.status(201).json({ success: true, data: saved });
+    sendCreated(res, saved, 'Report synthesized successfully');
   } catch (error) {
-    console.error('Synthesize Report Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to synthesize report');
   }
 };

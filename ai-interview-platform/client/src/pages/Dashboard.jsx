@@ -1,48 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, AlertCircle, RefreshCw, Plus } from 'lucide-react';
+import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, Plus } from 'lucide-react';
 import { SkeletonCard, SkeletonStatCard, SkeletonTable } from '../components/Common/Skeleton';
+import { Pagination } from '../components/Common/Pagination';
+
+const ITEMS_PER_PAGE = 5;
 
 export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [reports, setReports] = useState([]);
   const [schedules, setSchedules] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
   const [scheduleForm, setScheduleForm] = useState({ role: 'Frontend Engineer', scheduledAt: '', durationMinutes: 45, notes: '' });
   const [scheduleStatus, setScheduleStatus] = useState('');
+  const [reportPage, setReportPage] = useState(1);
+  const [schedulePage, setSchedulePage] = useState(1);
 
-  const fetchReports = async () => {
-    setLoading(true);
-    setErrorMessage('');
-    try {
-      const token = localStorage.getItem('camsense_token') || 'demo_token_active';
-      const res = await fetch('/api/report', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || 'Unable to load assessment reports.');
-      }
-      setReports(Array.isArray(json.data) ? json.data : []);
-
-      const scheduleRes = await fetch('/api/schedules', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const scheduleJson = await scheduleRes.json();
-      if (scheduleRes.ok && scheduleJson.success) {
-        setSchedules(Array.isArray(scheduleJson.data) ? scheduleJson.data : []);
-      }
-    } catch (err) {
-      console.error('Error fetching reports:', err);
-      setErrorMessage(err.message || 'Unable to load assessment reports.');
-      setReports([]);
-    } finally {
-      setLoading(false);
+  const fetchReportsData = useCallback(async (signal) => {
+    const token = localStorage.getItem('camsense_token') || 'demo_token_active';
+    const [reportsJson, scheduleJson] = await Promise.all([
+      wrapFetch('/api/report', { headers: { Authorization: `Bearer ${token}` } })(signal),
+      wrapFetch('/api/schedules', { headers: { Authorization: `Bearer ${token}` } })(signal),
+    ]);
+    if (!reportsJson.success) throw new Error(reportsJson.message || 'Unable to load assessment reports.');
+    setReports(Array.isArray(reportsJson.data) ? reportsJson.data : []);
+    if (scheduleJson.success) {
+      setSchedules(Array.isArray(scheduleJson.data) ? scheduleJson.data : []);
     }
-  };
+    return reportsJson;
+  }, []);
+
+  const { loading, error: errorMessage, execute: fetchReports } = useFetch(fetchReportsData, true);
 
   const handleCreateSchedule = async (e) => {
     e.preventDefault();
-    setScheduleStatus('');
+    setScheduleError('');
+    setScheduleSuccess('');
     try {
       const token = localStorage.getItem('camsense_token') || 'demo_token_active';
       const res = await fetch('/api/schedules', {
@@ -56,15 +46,11 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
       }
       setSchedules(prev => [...prev, json.data].sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt)));
       setScheduleForm({ role: 'Frontend Engineer', scheduledAt: '', durationMinutes: 45, notes: '' });
-      setScheduleStatus('Interview scheduled successfully.');
+      setScheduleSuccess('Interview scheduled successfully.');
     } catch (err) {
-      setScheduleStatus(err.message || 'Unable to schedule interview.');
+      setScheduleError(err.message || 'Unable to schedule interview.');
     }
   };
-
-  useEffect(() => {
-    fetchReports();
-  }, []);
 
   const handleViewReport = (report) => {
     // Populate global state to render Result screen properly
@@ -102,17 +88,7 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
           <div style={{ height: '28px', width: '40%', background: '#1a1a1a', borderRadius: '6px', marginBottom: '8px' }} />
           <div style={{ height: '14px', width: '60%', background: '#1a1a1a', borderRadius: '6px' }} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
-          <SkeletonCard height="300px" />
-          <SkeletonCard height="300px" />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-          <SkeletonStatCard />
-          <SkeletonStatCard />
-          <SkeletonStatCard />
-          <SkeletonStatCard />
-        </div>
-        <SkeletonTable rows={4} />
+        <LoadingOverlay message="Loading dashboard..." />
       </div>
     );
   }
@@ -120,19 +96,19 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
   if (errorMessage) {
     return (
       <div style={{ maxWidth: '720px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
-        <div style={{ background: '#111', border: '1px solid #3a1f1f', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
-          <AlertCircle size={34} color="#f87171" style={{ marginBottom: '16px' }} />
-          <h1 style={{ fontSize: '20px', fontWeight: '700', color: '#fff', margin: '0 0 8px' }}>Unable to load reports</h1>
-          <p style={{ fontSize: '13px', color: '#aaa', maxWidth: '420px', margin: '0 auto 24px', lineHeight: '1.5' }}>
-            {errorMessage}
-          </p>
-          <button
-            onClick={fetchReports}
-            style={{ padding: '10px 18px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-          >
-            <RefreshCw size={13} /> Retry
-          </button>
-        </div>
+        <EmptyState
+          icon={null}
+          title="Unable to load reports"
+          message={errorMessage}
+          action={
+            <button
+              onClick={fetchReports}
+              style={{ marginTop: '16px', padding: '10px 18px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Loader2 size={13} /> Retry
+            </button>
+          }
+        />
       </div>
     );
   }
@@ -162,7 +138,8 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
           <input type="datetime-local" value={scheduleForm.scheduledAt} onChange={e => setScheduleForm(p => ({ ...p, scheduledAt: e.target.value }))} required aria-label="Schedule date and time" style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e0e0e0', padding: '10px', fontSize: '13px' }} />
           <input type="number" min="15" max="180" value={scheduleForm.durationMinutes} onChange={e => setScheduleForm(p => ({ ...p, durationMinutes: e.target.value }))} style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e0e0e0', padding: '10px', fontSize: '13px' }} />
           <textarea value={scheduleForm.notes} onChange={e => setScheduleForm(p => ({ ...p, notes: e.target.value }))} rows={3} placeholder="Preparation notes or target company context" style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e0e0e0', padding: '10px', fontSize: '13px', resize: 'none', lineHeight: '1.5' }} />
-          {scheduleStatus && <div style={{ color: scheduleStatus.includes('successfully') ? '#4ade80' : '#f87171', fontSize: '12px' }}>{scheduleStatus}</div>}
+          {scheduleSuccess && <div style={{ color: '#4ade80', fontSize: '12px' }}>{scheduleSuccess}</div>}
+          {scheduleError && <ErrorMessage message={scheduleError} />}
           <button type="submit" style={{ padding: '10px 14px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             <Plus size={14} /> Add Schedule
           </button>
@@ -173,10 +150,12 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
             <Clock size={14} color="#888" /> Upcoming Sessions
           </h2>
           {schedules.length === 0 ? (
-            <p style={{ fontSize: '13px', color: '#777', lineHeight: '1.5', margin: 0 }}>No upcoming interviews scheduled.</p>
+            <EmptyState icon={null} title="No upcoming sessions" message="Schedule your first mock interview above." />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {schedules.slice(0, 4).map(schedule => (
+              {(() => {
+                const start = (schedulePage - 1) * ITEMS_PER_PAGE;
+                return schedules.slice(start, start + ITEMS_PER_PAGE).map(schedule => (
                 <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
                   <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} • {schedule.durationMinutes} min</span>
@@ -198,26 +177,28 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
                     {new Date(schedule.scheduledAt).getTime() > Date.now() ? 'Starts later' : 'Start Session'}
                   </button>
                 </div>
-              ))}
+              );
+            })}
             </div>
+            <Pagination currentPage={schedulePage} totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)} onPageChange={setSchedulePage} />
           )}
         </div>
       </div>
 
       {reports.length === 0 ? (
-        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
-          <BarChart2 size={36} color="#444" style={{ marginBottom: '16px' }} />
-          <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#fff', marginBottom: '8px' }}>No interview attempts recorded</h2>
-          <p style={{ fontSize: '13px', color: '#888', maxWidth: '380px', margin: '0 auto 24px', lineHeight: '1.5' }}>
-            To generate your analytics metrics, configure and complete your first mock interview session.
-          </p>
-          <button
-            onClick={() => setCurrentTab('setup')}
-            style={{ padding: '10px 20px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
-          >
-            Start Setup Session
-          </button>
-        </div>
+        <EmptyState
+          icon={BarChart2}
+          title="No interview attempts recorded"
+          message="To generate your analytics metrics, configure and complete your first mock interview session."
+          action={
+            <button
+              onClick={() => setCurrentTab('setup')}
+              style={{ marginTop: '16px', padding: '10px 20px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+            >
+              Start Setup Session
+            </button>
+          }
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
@@ -247,7 +228,9 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
             </h2>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {reports.map((r) => (
+              {(() => {
+                const start = (reportPage - 1) * ITEMS_PER_PAGE;
+                return reports.slice(start, start + ITEMS_PER_PAGE).map((r) => (
                 <div
                   key={r._id}
                   style={{
@@ -283,8 +266,10 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
                     View Report <ChevronRight size={12} />
                   </button>
                 </div>
-              ))}
+              );
+            })}
             </div>
+            <Pagination currentPage={reportPage} totalPages={Math.ceil(reports.length / ITEMS_PER_PAGE)} onPageChange={setReportPage} />
           </div>
 
         </div>

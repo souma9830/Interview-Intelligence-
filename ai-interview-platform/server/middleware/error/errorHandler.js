@@ -1,9 +1,4 @@
-/**
- * Centralized Express Error-Handling Middleware
- * ─────────────────────────────────────────────
- * Catches all unhandled errors thrown or forwarded via next(err) across
- * every route and middleware in the application.
- */
+const { sendError } = require('../../utils/apiResponse');
 
 class ApiError extends Error {
   constructor(statusCode, message, details = null) {
@@ -26,9 +21,6 @@ const notFoundHandler = (req, res, _next) => {
   return errorResponse(res, `Route not found: ${req.method} ${req.originalUrl}`, 404);
 };
 
-/**
- * Global error-catching middleware.
- */
 const globalErrorHandler = (err, req, res, _next) => {
   const statusCode = err.statusCode || err.status || 500;
   const isServerError = statusCode >= 500;
