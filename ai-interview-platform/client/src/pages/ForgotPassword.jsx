@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
+import { ErrorMessage } from '../components/Common/ErrorMessage';
 
 const inp = (err) => ({ width: '100%', background: '#0d0d0d', border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`, borderRadius: '8px', padding: '10px 12px 10px 38px', fontSize: '14px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box', transition: 'border-color 0.15s' });
 
@@ -7,9 +8,7 @@ export default function ForgotPassword({ setCurrentTab }) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [toast, setToast] = useState(null);
-
-  const showToast = (msg, type = 'ok') => { setToast({ msg, type }); setTimeout(() => setToast(null), 4000); };
+  const { addToast } = useToast();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,7 +28,7 @@ export default function ForgotPassword({ setCurrentTab }) {
       const data = await res.json();
       
       if (data.success) {
-        showToast('OTP sent to your email');
+        addToast('OTP sent to your email');
         setTimeout(() => {
           // Store email in local storage or pass via state, here we just use localStorage for simplicity
           localStorage.setItem('reset_email', email);
@@ -47,11 +46,6 @@ export default function ForgotPassword({ setCurrentTab }) {
 
   return (
     <div style={{ width: '100%', maxWidth: '400px', padding: '0 16px', fontFamily: 'Inter, sans-serif' }}>
-      {toast && (
-        <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 100, background: toast.type === 'ok' ? '#14532d' : '#7f1d1d', border: `1px solid ${toast.type === 'ok' ? '#22c55e' : '#ef4444'}`, color: '#fff', padding: '10px 16px', borderRadius: '8px', fontSize: '13px' }}>
-          {toast.msg}
-        </div>
-      )}
 
       <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '32px' }}>
         <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#fff', margin: '0 0 4px' }}>Forgot Password</h2>
@@ -66,7 +60,7 @@ export default function ForgotPassword({ setCurrentTab }) {
               <Mail size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} />
               <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); setError(''); }} style={inp(error)} />
             </div>
-            {error && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{error}</p>}
+            {error && <ErrorMessage message={error} style={{ marginTop: '4px' }} />}
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '8px', width: '100%', padding: '11px', background: loading ? '#1a1a1a' : '#fff', color: loading ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s ease' }}>

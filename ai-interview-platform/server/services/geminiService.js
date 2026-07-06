@@ -1,7 +1,5 @@
-const cache = require('./cache/localCache');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { llmCache } = require('../services/cache/cacheManager');
-const cacheService = require('../services/cacheService');
+const { llmCache } = require('./cache/cacheManager');
 
 const getModel = () => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -39,7 +37,8 @@ const callGeminiWithRetry = async (model, promptContent, maxRetries = 3) => {
  */
 const extractResumeData = async (resumeText) => {
   const crypto = require('crypto');
-  const cached = await cacheService.get(resumeText);
+  const cacheKey = `resume_${crypto.createHash('md5').update(resumeText).digest('hex')}`;
+  const cached = llmCache.get(cacheKey);
   if (cached) {
     console.log('[Cache] Returning db-cached structured resume profile.');
     return cached;
@@ -84,7 +83,7 @@ Rules:
 
   const data = JSON.parse(rawText.trim());
   console.log(`[Gemini] Extracted ${data.skills?.length || 0} skills from resume.`);
-  await cacheService.set(resumeText, data);
+  llmCache.set(cacheKey, data);
   return data;
 };
 

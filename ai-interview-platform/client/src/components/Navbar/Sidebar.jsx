@@ -1,5 +1,6 @@
 import React from 'react';
-import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarChart2, Sun, Moon } from 'lucide-react';
+import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarChart2, Sun, Moon, Menu, X } from 'lucide-react';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const S = {
   aside: { width: '240px', background: 'var(--bg-card)', borderRight: '1px solid var(--border-color)', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '24px 16px', flexShrink: 0, transition: 'background 0.3s, border-color 0.3s' },
@@ -7,15 +8,35 @@ const S = {
   logoIcon: { width: '32px', height: '32px', background: 'var(--color-primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   logoText: { fontSize: '15px', fontWeight: '700', color: 'var(--color-primary)', letterSpacing: '-0.01em' },
   logoSub: { fontSize: '11px', color: '#888', marginTop: '1px' },
-  navLabel: { fontSize: '10px', fontWeight: '600', color: '#888', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '16px 12px 8px' },
-  navBtn: (active, disabled) => ({ 
-    width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '8px', border: 'none', 
-    cursor: disabled ? 'not-allowed' : 'pointer', 
-    background: active ? '#1e1e1e' : 'transparent', 
-    color: disabled ? '#555' : active ? '#fff' : '#b0b0b0', 
-    fontSize: '13.5px', fontWeight: active ? '600' : '500', transition: 'all 0.15s', textAlign: 'left', 
+  navLabel: (collapsed) => ({
+    fontSize: '10px',
+    fontWeight: '600',
+    color: '#888',
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    padding: collapsed ? '16px 0 8px' : '16px 12px 8px',
+    textAlign: collapsed ? 'center' : 'left',
+    overflow: 'hidden',
+    whiteSpace: 'nowrap'
+  }),
+  navBtn: (active, disabled, collapsed) => ({
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: collapsed ? '9px 0' : '9px 12px',
+    borderRadius: '8px',
+    border: 'none',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    background: active ? '#1e1e1e' : 'transparent',
+    color: disabled ? '#555' : active ? '#fff' : '#b0b0b0',
+    fontSize: '13.5px',
+    fontWeight: active ? '600' : '500',
+    transition: 'all 0.15s',
+    textAlign: 'left',
     borderLeft: active ? '2px solid #fff' : '2px solid transparent',
-    opacity: disabled ? 0.5 : 1
+    opacity: disabled ? 0.5 : 1,
+    justifyContent: collapsed ? 'center' : 'flex-start'
   }),
   userBox: { marginTop: 'auto', borderTop: '1px solid #1e1e1e', paddingTop: '16px' },
   avatar: { width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-app)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-primary)', flexShrink: 0 },
@@ -23,20 +44,38 @@ const S = {
 };
 
 export default function Sidebar({ currentTab, setCurrentTab, user, globalState = {}, onLogout }) {
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [collapsed, setCollapsed] = React.useState(isMobile);
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isMobile) {
+      setCollapsed(true);
+      setMobileOpen(false);
+    } else {
+      setCollapsed(false);
+    }
+  }, [isMobile]);
+
+  const { theme, toggleTheme } = useTheme();
+
+  const toggleCollapse = () => {
+    if (isMobile) {
+      setMobileOpen(prev => !prev);
+    } else {
+      setCollapsed(prev => !prev);
+    }
+  };
+
+  const handleNavClick = (id, disabled) => {
+    if (disabled) return;
+    setCurrentTab(id);
+    if (isMobile) setMobileOpen(false);
+  };
+
   const isSetupDone = !!globalState.role;
   const isSessionDone = globalState.userAnswers && globalState.userAnswers.length > 0;
   const isCodingDone = !!globalState.finalCode;
-
-  const [theme, setTheme] = React.useState(() => localStorage.getItem('theme') || 'dark');
-
-  React.useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
 
   const items = [
     { id: 'home', label: 'Home', icon: HomeIcon, disabled: false },
@@ -50,72 +89,110 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
   const name = user?.name || 'Candidate';
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
-  const handleNavClick = (id, disabled) => {
-    if (disabled) return;
-    setCurrentTab(id);
-  };
-
   const getNavLabel = (label, disabled) => (
     disabled ? `${label} locked until previous assessment step is complete` : `Open ${label}`
   );
 
+  const effectiveCollapsed = isMobile ? !mobileOpen : collapsed;
+
   return (
-    <aside style={S.aside}>
-      <div>
-        <div style={S.logo}>
-          <div style={S.logoIcon}><Cpu size={16} color="#000" /></div>
-          <div>
-            <div style={S.logoText}>CamSense AI</div>
-            <div style={S.logoSub}>Interview Engine</div>
-          </div>
-        </div>
-
-        <div style={S.navLabel}>Navigation</div>
-        <nav aria-label="Assessment navigation" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          {items.map(({ id, label, icon: Icon, disabled }) => (
-            <button 
-              key={id} 
-              onClick={() => handleNavClick(id, disabled)} 
-              style={S.navBtn(currentTab === id, disabled)}
-              disabled={disabled}
-              aria-current={currentTab === id ? 'page' : undefined}
-              aria-label={getNavLabel(label, disabled)}
-            >
-              <Icon size={15} />
-              <span style={{ flex: 1 }}>{label}</span>
-              {disabled && <Lock size={12} style={{ color: '#666' }} aria-hidden="true" />}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      <div style={{ marginTop: 'auto', marginBottom: '16px' }}>
+    <>
+      {isMobile && (
         <button
-          onClick={toggleTheme}
+          onClick={toggleCollapse}
+          aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
           style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--border-color)',
-            background: 'transparent', color: 'var(--color-secondary)', fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s'
+            position: 'fixed', top: '12px', left: '12px', zIndex: 1001,
+            background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+            borderRadius: '8px', padding: '8px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#ccc'
           }}
         >
-          {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-          <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+          {mobileOpen ? <X size={18} /> : <Menu size={18} />}
         </button>
-      </div>
+      )}
+      {(isMobile && !mobileOpen) ? null : (
+        <aside style={S.aside(effectiveCollapsed)}>
+          <div>
+            <div style={S.logo(effectiveCollapsed)}>
+              <div style={S.logoIcon}><Cpu size={16} color="#000" /></div>
+              {!effectiveCollapsed && (
+                <div>
+                  <div style={S.logoText}>CamSense AI</div>
+                  <div style={S.logoSub}>Interview Engine</div>
+                </div>
+              )}
+              {!isMobile && (
+                <button
+                  onClick={toggleCollapse}
+                  aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: '#888', padding: '4px', marginLeft: 'auto',
+                    display: 'flex'
+                  }}
+                >
+                  {collapsed ? <Menu size={14} /> : <X size={14} />}
+                </button>
+              )}
+            </div>
 
-      <div style={S.userBox}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={S.avatar}>{initials}</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '13px', fontWeight: '600', color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-            <div style={{ fontSize: '11px', color: '#4ade80', marginTop: '1px' }}>● Connected</div>
+            {!effectiveCollapsed && <div style={S.navLabel(effectiveCollapsed)}>Navigation</div>}
+            <nav aria-label="Assessment navigation" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {items.map(({ id, label, icon: Icon, disabled }) => (
+                <button
+                  key={id}
+                  onClick={() => handleNavClick(id, disabled)}
+                  style={S.navBtn(currentTab === id, disabled, effectiveCollapsed)}
+                  disabled={disabled}
+                  aria-current={currentTab === id ? 'page' : undefined}
+                  aria-label={getNavLabel(label, disabled)}
+                  title={effectiveCollapsed ? label : undefined}
+                >
+                  <Icon size={15} />
+                  {!effectiveCollapsed && <span style={{ flex: 1 }}>{label}</span>}
+                  {!effectiveCollapsed && disabled && <Lock size={12} style={{ color: '#666' }} aria-hidden="true" />}
+                </button>
+              ))}
+            </nav>
           </div>
-          {onLogout && (
-            <button onClick={onLogout} style={S.logoutBtn} title="Logout" aria-label="Log out of CamSense AI">
-              <LogOut size={15} aria-hidden="true" />
-            </button>
+
+          {!effectiveCollapsed && (
+            <div style={{ marginTop: 'auto', marginBottom: '16px' }}>
+              <button
+                onClick={toggleTheme}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                  background: 'transparent', color: 'var(--color-secondary)', fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s'
+                }}
+              >
+                {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+                <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+              </button>
+            </div>
           )}
-        </div>
-      </div>
-    </aside>
+
+          <div style={S.userBox}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: effectiveCollapsed ? 'center' : 'flex-start' }}>
+              <div style={S.avatar}>{initials}</div>
+              {!effectiveCollapsed && (
+                <>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                    <div style={{ fontSize: '11px', color: '#4ade80', marginTop: '1px' }}>● Connected</div>
+                  </div>
+                  {onLogout && (
+                    <button onClick={onLogout} style={S.logoutBtn} title="Logout" aria-label="Log out of CamSense AI">
+                      <LogOut size={15} aria-hidden="true" />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </aside>
+      )}
+    </>
   );
 }
