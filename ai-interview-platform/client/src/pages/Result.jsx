@@ -31,35 +31,45 @@ export default function Result({ globalState, setGlobalState, setCurrentTab }) {
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
-  const synthesizeReportFn = useCallback(async (signal) => {
-    const response = await fetch('/api/report/synthesize', {
-      method: 'POST', signal,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer demo_token_active'
-      },
-      body: JSON.stringify({ 
-        interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
-        role: selectedRole,
-        experience: experience,
-        questions: globalState.interviewQuestions || [],
-        answers: globalState.userAnswers || []
-      })
-    });
-    const resJson = await response.json();
-    if (resJson.success && resJson.data) {
-      let data = resJson.data;
-      const violations = globalState.violationCount || 0;
-      if (violations > 0) {
-        const deduction = Math.min(violations * 5, 25);
-        data.overallScore = Math.max(0, (data.overallScore || 80) - deduction);
-        data.weaknesses = [...(data.weaknesses || []), `Integrity Warning: Detected ${violations} instance(s) of tab-switching or exiting fullscreen mode.`];
+  const synthesizeReport = async (signal) => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/report/synthesize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer demo_token_active'
+        },
+        body: JSON.stringify({ 
+          interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
+          role: selectedRole,
+          experience: experience,
+          questions: globalState.interviewQuestions || [],
+          answers: globalState.userAnswers || []
+        }),
+        signal
+      });
+      const resJson = await response.json();
+      if (resJson.success && resJson.data) {
+        let data = resJson.data;
+        const violations = globalState.violationCount || 0;
+        if (violations > 0) {
+          const deduction = Math.min(violations * 5, 25);
+          data.overallScore = Math.max(0, (data.overallScore || 80) - deduction);
+          data.weaknesses = [...(data.weaknesses || []), `Integrity Warning: Detected ${violations} instance(s) of tab-switching or exiting fullscreen mode.`];
+        }
+        data.resumeScore = data.resumeScore || 85;
+        data.interviewScore = data.interviewScore || 82;
+        data.codingScore = data.codingScore || 88;
+        setReportData(data);
+      } else {
+        triggerLocalFallback();
       }
-      data.resumeScore = data.resumeScore || 85;
-      data.interviewScore = data.interviewScore || 82;
-      data.codingScore = data.codingScore || 88;
-      setReportData(data);
-    } else {
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        console.log('[Synthesize Aborted] Request was cancelled.');
+        return;
+      }
       triggerLocalFallback();
     }
     return resJson;
@@ -122,6 +132,12 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
       ]
     });
   };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    synthesizeReport(controller.signal);
+    return () => controller.abort();
+  }, [interviewId, selectedRole]);
 
   const handleDownload = () => {
     if (!reportData) return;
