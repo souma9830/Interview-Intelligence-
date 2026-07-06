@@ -28,7 +28,7 @@ export default function Result({ globalState, setGlobalState, setCurrentTab }) {
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
-  const synthesizeReport = async () => {
+  const synthesizeReport = async (signal) => {
     setLoading(true);
     try {
       const response = await fetch('/api/report/synthesize', {
@@ -43,7 +43,8 @@ export default function Result({ globalState, setGlobalState, setCurrentTab }) {
           experience: experience,
           questions: globalState.interviewQuestions || [],
           answers: globalState.userAnswers || []
-        })
+        }),
+        signal
       });
       const resJson = await response.json();
       if (resJson.success && resJson.data) {
@@ -61,7 +62,11 @@ export default function Result({ globalState, setGlobalState, setCurrentTab }) {
       } else {
         triggerLocalFallback();
       }
-    } catch {
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        console.log('[Synthesize Aborted] Request was cancelled.');
+        return;
+      }
       triggerLocalFallback();
     } finally {
       setLoading(false);
@@ -124,7 +129,11 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
     });
   };
 
-  useEffect(() => { synthesizeReport(); }, [interviewId, selectedRole]);
+  useEffect(() => {
+    const controller = new AbortController();
+    synthesizeReport(controller.signal);
+    return () => controller.abort();
+  }, [interviewId, selectedRole]);
 
   const handleDownload = () => {
     if (!reportData) return;

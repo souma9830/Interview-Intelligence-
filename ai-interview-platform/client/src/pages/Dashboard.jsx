@@ -10,13 +10,14 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [scheduleForm, setScheduleForm] = useState({ role: 'Frontend Engineer', scheduledAt: '', durationMinutes: 45, notes: '' });
   const [scheduleStatus, setScheduleStatus] = useState('');
 
-  const fetchReports = async () => {
+  const fetchReports = async (signal) => {
     setLoading(true);
     setErrorMessage('');
     try {
       const token = localStorage.getItem('camsense_token') || 'demo_token_active';
       const res = await fetch('/api/report', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        signal
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
@@ -25,13 +26,18 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
       setReports(Array.isArray(json.data) ? json.data : []);
 
       const scheduleRes = await fetch('/api/schedules', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        signal
       });
       const scheduleJson = await scheduleRes.json();
       if (scheduleRes.ok && scheduleJson.success) {
         setSchedules(Array.isArray(scheduleJson.data) ? scheduleJson.data : []);
       }
     } catch (err) {
+      if (err.name === 'AbortError') {
+        console.log('[Fetch Aborted] Request was cancelled.');
+        return;
+      }
       console.error('Error fetching reports:', err);
       setErrorMessage(err.message || 'Unable to load assessment reports.');
       setReports([]);
@@ -63,7 +69,9 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
   };
 
   useEffect(() => {
-    fetchReports();
+    const controller = new AbortController();
+    fetchReports(controller.signal);
+    return () => controller.abort();
   }, []);
 
   const handleViewReport = (report) => {
