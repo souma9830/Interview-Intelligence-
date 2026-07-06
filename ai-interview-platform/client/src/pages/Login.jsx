@@ -3,7 +3,7 @@ import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { auth, googleProvider } from '../firebase';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { sendPasswordReset } from '../services/auth';
-import { useToast } from '../hooks/useToast';
+import { useToast } from '../components/Common/ToastContext';
 import {
   inp, label, card, authPageContainer, authHeader, authSubtext,
   btnPrimary, btnSecondary, iconPosition, inputGroup, inputError,
@@ -17,7 +17,7 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const { addToast } = useToast();
+  const toast = useToast();
 
   const validate = () => {
     const e = {};
@@ -37,7 +37,7 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
-      addToast('Signed in successfully!');
+      toast.show('Signed in successfully!', 'success');
       setTimeout(() => {
         localStorage.setItem('camsense_token', token);
         setToken(token);
@@ -46,9 +46,9 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       }, 1200);
     } catch (err) {
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        addToast('Invalid email or password', 'err');
+        toast.show('Invalid email or password', 'error');
       } else {
-        addToast('Authentication failed. Check connection.', 'err');
+        toast.show('Authentication failed. Check connection.', 'error');
       }
     }
     finally { setTimeout(() => setLoading(false), 1200); }
@@ -59,7 +59,7 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
-      addToast('Signed in with Google!');
+      toast.show('Signed in with Google!', 'success');
       setTimeout(() => {
         localStorage.setItem('camsense_token', token);
         setToken(token);
@@ -67,13 +67,12 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
         setCurrentTab('home');
       }, 1200);
     } catch (err) {
-      addToast('Google sign-in was cancelled or failed.', 'err');
+      toast.show('Google sign-in was cancelled or failed.', 'error');
     }
   };
 
   return (
     <div style={authPageContainer}>
-
       <div style={card}>
         <h2 style={authHeader}>Sign in</h2>
         <p style={authSubtext}>Enter your credentials to access the platform.</p>

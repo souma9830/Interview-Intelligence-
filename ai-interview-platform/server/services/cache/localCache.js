@@ -13,8 +13,8 @@ if (ttlCleanup.unref) {
   ttlCleanup.unref();
 }
 
-module.exports = {
-  get: (key) => {
+class LocalCache {
+  get(key) {
     const item = cache.get(key);
     if (!item) return null;
     if (Date.now() > item.expiry) {
@@ -22,15 +22,23 @@ module.exports = {
       return null;
     }
     return item.value;
-  },
-  set: (key, value, ttlMs = 300000) => {
+  }
+
+  set(key, value, ttlMs = 300000) {
     cache.set(key, { value, expiry: Date.now() + ttlMs });
-  },
-  del: (key) => {
+  }
+
+  del(key) {
     cache.delete(key);
-  },
-  clear: () => {
+  }
+
+  clear() {
     cache.clear();
-  },
-  size: () => cache.size,
-};
+  }
+
+  size() {
+    return cache.size;
+  }
+}
+
+module.exports = LocalCache;

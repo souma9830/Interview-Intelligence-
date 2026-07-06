@@ -3,8 +3,10 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const reportController = require('../controllers/reportController');
 
-router.get('/', protect, reportController.listReports);
+const { routeCacheMiddleware } = require('../middleware/cacheMiddleware');
+
+router.get('/', protect, routeCacheMiddleware(120), reportController.listReports);
 router.post('/synthesize', protect, reportController.synthesizeReport);
-router.get('/:id', protect, reportController.getReport);
+router.get('/:id', protect, routeCacheMiddleware(120), reportController.getReport);
 
 module.exports = router;

@@ -6,7 +6,7 @@ const notificationService = require('../services/notificationService');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
-const { sendSuccess, sendError, handleControllerError } = require('../utils/apiResponse');
+const { successResponse } = require('../utils/responseHelper');
 
 // Authentication Controller
 // Endpoints are protected by express-rate-limit bounds to prevent SMTP resource exhaustion.
@@ -19,7 +19,8 @@ exports.getMe = async (req, res, next) => {
     if (!req.user) {
       return sendError(res, 'User context not found in stateless request session', 401);
     }
-    sendSuccess(res, req.user);
+    // Return the user mapped statelessly from the decoded Firebase token in authMiddleware
+    return successResponse(res, req.user);
   } catch (error) {
     handleControllerError(res, error, 'Failed to get user');
   }
@@ -30,7 +31,7 @@ exports.getMe = async (req, res, next) => {
 // @access  Private
 exports.logout = async (req, res, next) => {
   try {
-    sendSuccess(res, null, 200, 'Logged out successfully');
+    return successResponse(res, null, 'Logged out successfully');
   } catch (error) {
     handleControllerError(res, error, 'Failed to logout');
   }

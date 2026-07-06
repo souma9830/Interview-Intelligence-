@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Shield, AlertTriangle, CheckCircle } from 'lucide-react';
+import RadialProgress from '../Common/RadialProgress';
 
 export default function AdvancedTelemetryDashboard() {
   const [logs, setLogs] = useState([]);
@@ -14,9 +15,12 @@ export default function AdvancedTelemetryDashboard() {
 
   return (
     <div style={{ padding: '24px', background: '#0a0a0a', color: '#fff', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <Shield size={28} color="#fff" />
-        <h1 style={{ fontSize: '24px', fontWeight: '600', margin: 0 }}>Advanced Proctoring Telemetry</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Shield size={28} color="#fff" />
+          <h1 style={{ fontSize: '24px', fontWeight: '600', margin: 0 }}>Advanced Proctoring Telemetry</h1>
+        </div>
+        <RadialProgress score={100} size={70} strokeWidth={6} title="Compliance Rate" />
       </div>
       <div style={{ background: '#111', border: '1px solid #222', borderRadius: '12px', padding: '20px' }}>
         <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#aaa', marginBottom: '16px' }}>Real-time Compliance Log</h2>

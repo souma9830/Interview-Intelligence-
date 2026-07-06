@@ -13,16 +13,39 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [reportPage, setReportPage] = useState(1);
   const [schedulePage, setSchedulePage] = useState(1);
 
-  const fetchReportsData = useCallback(async (signal) => {
-    const token = localStorage.getItem('camsense_token') || 'demo_token_active';
-    const [reportsJson, scheduleJson] = await Promise.all([
-      wrapFetch('/api/report', { headers: { Authorization: `Bearer ${token}` } })(signal),
-      wrapFetch('/api/schedules', { headers: { Authorization: `Bearer ${token}` } })(signal),
-    ]);
-    if (!reportsJson.success) throw new Error(reportsJson.message || 'Unable to load assessment reports.');
-    setReports(Array.isArray(reportsJson.data) ? reportsJson.data : []);
-    if (scheduleJson.success) {
-      setSchedules(Array.isArray(scheduleJson.data) ? scheduleJson.data : []);
+  const fetchReports = async (signal) => {
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      const token = localStorage.getItem('camsense_token') || 'demo_token_active';
+      const res = await fetch('/api/report', {
+        headers: { Authorization: `Bearer ${token}` },
+        signal
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Unable to load assessment reports.');
+      }
+      setReports(Array.isArray(json.data) ? json.data : []);
+
+      const scheduleRes = await fetch('/api/schedules', {
+        headers: { Authorization: `Bearer ${token}` },
+        signal
+      });
+      const scheduleJson = await scheduleRes.json();
+      if (scheduleRes.ok && scheduleJson.success) {
+        setSchedules(Array.isArray(scheduleJson.data) ? scheduleJson.data : []);
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        console.log('[Fetch Aborted] Request was cancelled.');
+        return;
+      }
+      console.error('Error fetching reports:', err);
+      setErrorMessage(err.message || 'Unable to load assessment reports.');
+      setReports([]);
+    } finally {
+      setLoading(false);
     }
     return reportsJson;
   }, []);
@@ -51,6 +74,12 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
       setScheduleError(err.message || 'Unable to schedule interview.');
     }
   };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchReports(controller.signal);
+    return () => controller.abort();
+  }, []);
 
   const handleViewReport = (report) => {
     // Populate global state to render Result screen properly

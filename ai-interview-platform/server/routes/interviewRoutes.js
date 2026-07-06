@@ -26,7 +26,7 @@ router.post('/questions', protect, questionController.generateQuestion);
 // Code evaluation endpoints pass through the sandbox security layer
 // before reaching the controller. This prevents execution of code
 // containing filesystem access, process spawning, or network calls.
-router.post('/coding/eval', protect, sandboxMiddleware, interviewController.evaluateCode);
+router.post('/coding/eval', protect, sandboxMiddleware.validateSandboxPayload, interviewController.evaluateCode);
 router.post('/evaluate-answer', protect, interviewController.evaluateAnswerRealtime);
 router.post('/telemetry', protect, interviewController.logTelemetry);
 
@@ -35,7 +35,9 @@ router.post('/analyze-resume', protect, upload.single('resume'), interviewContro
 
 // Enhanced code execution evaluation middlewares applied
 
-router.get('/report/:id', getReport);
-router.get('/schedule/:id', getSchedule);
+const { routeCacheMiddleware } = require('../middleware/cacheMiddleware');
+
+router.get('/report/:id', routeCacheMiddleware(120), getReport);
+router.get('/schedule/:id', routeCacheMiddleware(60), getSchedule);
 
 module.exports = router;
