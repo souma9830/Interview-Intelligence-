@@ -1,56 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, Plus } from 'lucide-react';
-import { SkeletonCard, SkeletonStatCard, SkeletonTable } from '../components/Common/Skeleton';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, Plus, Loader2 } from 'lucide-react';
 import { Pagination } from '../components/Common/Pagination';
+import { useFetch } from '../hooks/useFetch';
 
 const ITEMS_PER_PAGE = 5;
 
+const fetchDashboardData = async (signal) => {
+  const token = localStorage.getItem('camsense_token') || 'demo_token_active';
+  const [reportsRes, schedulesRes] = await Promise.all([
+    fetch('/api/report', { headers: { Authorization: `Bearer ${token}` }, signal }),
+    fetch('/api/schedules', { headers: { Authorization: `Bearer ${token}` }, signal }),
+  ]);
+
+  const reportsJson = await reportsRes.json();
+  const schedulesJson = await schedulesRes.json();
+
+  if (!reportsRes.ok || !reportsJson.success) {
+    throw new Error(reportsJson.message || 'Unable to load assessment reports.');
+  }
+
+  return {
+    reports: Array.isArray(reportsJson.data) ? reportsJson.data : [],
+    schedules: schedulesRes.ok && schedulesJson.success ? (Array.isArray(schedulesJson.data) ? schedulesJson.data : []) : [],
+  };
+};
+
 export default function Dashboard({ setCurrentTab, setGlobalState }) {
-  const [reports, setReports] = useState([]);
-  const [schedules, setSchedules] = useState([]);
   const [scheduleForm, setScheduleForm] = useState({ role: 'Frontend Engineer', scheduledAt: '', durationMinutes: 45, notes: '' });
-  const [scheduleStatus, setScheduleStatus] = useState('');
+  const [scheduleSuccess, setScheduleSuccess] = useState('');
+  const [scheduleError, setScheduleError] = useState('');
   const [reportPage, setReportPage] = useState(1);
   const [schedulePage, setSchedulePage] = useState(1);
 
-  const fetchReports = async (signal) => {
-    setLoading(true);
-    setErrorMessage('');
-    try {
-      const token = localStorage.getItem('camsense_token') || 'demo_token_active';
-      const res = await fetch('/api/report', {
-        headers: { Authorization: `Bearer ${token}` },
-        signal
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || 'Unable to load assessment reports.');
-      }
-      setReports(Array.isArray(json.data) ? json.data : []);
+  const { data, loading, error: fetchError, execute: refetchData } = useFetch(fetchDashboardData, true);
 
-      const scheduleRes = await fetch('/api/schedules', {
-        headers: { Authorization: `Bearer ${token}` },
-        signal
-      });
-      const scheduleJson = await scheduleRes.json();
-      if (scheduleRes.ok && scheduleJson.success) {
-        setSchedules(Array.isArray(scheduleJson.data) ? scheduleJson.data : []);
-      }
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        console.log('[Fetch Aborted] Request was cancelled.');
-        return;
-      }
-      console.error('Error fetching reports:', err);
-      setErrorMessage(err.message || 'Unable to load assessment reports.');
-      setReports([]);
-    } finally {
-      setLoading(false);
-    }
-    return reportsJson;
-  }, []);
-
-  const { loading, error: errorMessage, execute: fetchReports } = useFetch(fetchReportsData, true);
+  const reports = data?.reports || [];
+  const schedules = data?.schedules || [];
 
   const handleCreateSchedule = async (e) => {
     e.preventDefault();
@@ -67,22 +52,15 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
       if (!res.ok || !json.success) {
         throw new Error(json.message || 'Unable to schedule interview.');
       }
-      setSchedules(prev => [...prev, json.data].sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt)));
       setScheduleForm({ role: 'Frontend Engineer', scheduledAt: '', durationMinutes: 45, notes: '' });
       setScheduleSuccess('Interview scheduled successfully.');
+      refetchData();
     } catch (err) {
       setScheduleError(err.message || 'Unable to schedule interview.');
     }
   };
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchReports(controller.signal);
-    return () => controller.abort();
-  }, []);
-
   const handleViewReport = (report) => {
-    // Populate global state to render Result screen properly
     setGlobalState(prev => ({
       ...prev,
       role: report.role || 'Software Engineer',
@@ -91,7 +69,6 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
       violationCount: 0,
       userAnswers: [],
       interviewQuestions: [],
-      // Override reports with current data
       questionScores: []
     }));
     setCurrentTab('result');
@@ -117,27 +94,27 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
           <div style={{ height: '28px', width: '40%', background: '#1a1a1a', borderRadius: '6px', marginBottom: '8px' }} />
           <div style={{ height: '14px', width: '60%', background: '#1a1a1a', borderRadius: '6px' }} />
         </div>
-        <LoadingOverlay message="Loading dashboard..." />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px', gap: '12px' }}>
+          <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} color="#888" />
+          <span style={{ fontSize: '13px', color: '#888' }}>Loading dashboard...</span>
+        </div>
       </div>
     );
   }
 
-  if (errorMessage) {
+  if (fetchError) {
     return (
       <div style={{ maxWidth: '720px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
-        <EmptyState
-          icon={null}
-          title="Unable to load reports"
-          message={errorMessage}
-          action={
-            <button
-              onClick={fetchReports}
-              style={{ marginTop: '16px', padding: '10px 18px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Loader2 size={13} /> Retry
-            </button>
-          }
-        />
+        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
+          <p style={{ fontSize: '14px', color: '#888', margin: '0 0 8px' }}>Unable to load reports</p>
+          <p style={{ fontSize: '12px', color: '#555', margin: '0 0 16px' }}>{fetchError}</p>
+          <button
+            onClick={() => refetchData()}
+            style={{ marginTop: '8px', padding: '10px 18px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Loader2 size={13} /> Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -168,7 +145,7 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
           <input type="number" min="15" max="180" value={scheduleForm.durationMinutes} onChange={e => setScheduleForm(p => ({ ...p, durationMinutes: e.target.value }))} style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e0e0e0', padding: '10px', fontSize: '13px' }} />
           <textarea value={scheduleForm.notes} onChange={e => setScheduleForm(p => ({ ...p, notes: e.target.value }))} rows={3} placeholder="Preparation notes or target company context" style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e0e0e0', padding: '10px', fontSize: '13px', resize: 'none', lineHeight: '1.5' }} />
           {scheduleSuccess && <div style={{ color: '#4ade80', fontSize: '12px' }}>{scheduleSuccess}</div>}
-          {scheduleError && <ErrorMessage message={scheduleError} />}
+          {scheduleError && <div style={{ color: '#ef4444', fontSize: '12px' }}>{scheduleError}</div>}
           <button type="submit" style={{ padding: '10px 14px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             <Plus size={14} /> Add Schedule
           </button>
@@ -179,7 +156,9 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
             <Clock size={14} color="#888" /> Upcoming Sessions
           </h2>
           {schedules.length === 0 ? (
-            <EmptyState icon={null} title="No upcoming sessions" message="Schedule your first mock interview above." />
+            <div style={{ textAlign: 'center', padding: '24px', color: '#555', fontSize: '13px' }}>
+              No upcoming sessions. Schedule your first mock interview above.
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {(() => {
@@ -209,25 +188,25 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
               );
             })}
             </div>
+          )}
+          {schedules.length > ITEMS_PER_PAGE && (
             <Pagination currentPage={schedulePage} totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)} onPageChange={setSchedulePage} />
           )}
         </div>
       </div>
 
       {reports.length === 0 ? (
-        <EmptyState
-          icon={BarChart2}
-          title="No interview attempts recorded"
-          message="To generate your analytics metrics, configure and complete your first mock interview session."
-          action={
-            <button
-              onClick={() => setCurrentTab('setup')}
-              style={{ marginTop: '16px', padding: '10px 20px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
-            >
-              Start Setup Session
-            </button>
-          }
-        />
+        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
+          <BarChart2 size={32} color="#333" style={{ margin: '0 auto 16px' }} />
+          <p style={{ fontSize: '14px', color: '#888', margin: '0 0 8px' }}>No interview attempts recorded</p>
+          <p style={{ fontSize: '12px', color: '#555', margin: '0 0 16px' }}>To generate your analytics metrics, configure and complete your first mock interview session.</p>
+          <button
+            onClick={() => setCurrentTab('setup')}
+            style={{ marginTop: '8px', padding: '10px 20px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+          >
+            Start Setup Session
+          </button>
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
@@ -298,7 +277,9 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
               );
             })}
             </div>
-            <Pagination currentPage={reportPage} totalPages={Math.ceil(reports.length / ITEMS_PER_PAGE)} onPageChange={setReportPage} />
+            {reports.length > ITEMS_PER_PAGE && (
+              <Pagination currentPage={reportPage} totalPages={Math.ceil(reports.length / ITEMS_PER_PAGE)} onPageChange={setReportPage} />
+            )}
           </div>
 
         </div>
@@ -307,5 +288,3 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
     </div>
   );
 }
-
-// Integrated system backup tools interface

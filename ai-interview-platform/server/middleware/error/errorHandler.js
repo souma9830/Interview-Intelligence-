@@ -12,13 +12,11 @@ class ApiError extends Error {
   }
 }
 
-const { errorResponse } = require('../../utils/responseHelper');
-
 /**
  * Handles requests that do not match any registered route.
  */
 const notFoundHandler = (req, res, _next) => {
-  return errorResponse(res, `Route not found: ${req.method} ${req.originalUrl}`, 404);
+  return sendError(res, `Route not found: ${req.method} ${req.originalUrl}`, 404);
 };
 
 const globalErrorHandler = (err, req, res, _next) => {
@@ -50,7 +48,7 @@ const globalErrorHandler = (err, req, res, _next) => {
   }
 
   const message = isServerError ? 'Internal Server Error' : (err.message || 'An error occurred');
-  return errorResponse(res, message, statusCode, err.details);
+  return sendError(res, message, statusCode, err.details);
 };
 
 module.exports = { ApiError, notFoundHandler, globalErrorHandler };

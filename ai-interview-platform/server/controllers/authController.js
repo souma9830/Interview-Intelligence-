@@ -6,7 +6,8 @@ const notificationService = require('../services/notificationService');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
-const { successResponse } = require('../utils/responseHelper');
+const { sendSuccess, sendError, handleControllerError } = require('../utils/apiResponse');
+const { validateEmail, validateOTP, validatePasswordStrength } = require('../utils/authValidation');
 
 // Authentication Controller
 // Endpoints are protected by express-rate-limit bounds to prevent SMTP resource exhaustion.
@@ -20,7 +21,7 @@ exports.getMe = async (req, res, next) => {
       return sendError(res, 'User context not found in stateless request session', 401);
     }
     // Return the user mapped statelessly from the decoded Firebase token in authMiddleware
-    return successResponse(res, req.user);
+    return sendSuccess(res, req.user);
   } catch (error) {
     handleControllerError(res, error, 'Failed to get user');
   }
@@ -31,7 +32,7 @@ exports.getMe = async (req, res, next) => {
 // @access  Private
 exports.logout = async (req, res, next) => {
   try {
-    return successResponse(res, null, 'Logged out successfully');
+    return sendSuccess(res, null, 200, 'Logged out successfully');
   } catch (error) {
     handleControllerError(res, error, 'Failed to logout');
   }
@@ -43,6 +44,11 @@ exports.logout = async (req, res, next) => {
 exports.forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
+
+    if (!validateEmail(email)) {
+      return sendError(res, 'Please provide a valid email address', 400);
+    }
+
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -85,8 +91,17 @@ exports.verifyOTP = async (req, res, next) => {
   try {
     const { email, otp, newPassword } = req.body;
 
-    if (!otp || !/^\d{6}$/.test(otp)) {
+    if (!validateEmail(email)) {
+      return sendError(res, 'Please provide a valid email address', 400);
+    }
+
+    if (!validateOTP(otp)) {
       return sendError(res, 'OTP must be exactly 6 numeric digits', 400);
+    }
+
+    const passwordCheck = validatePasswordStrength(newPassword);
+    if (!passwordCheck.valid) {
+      return sendError(res, passwordCheck.message, 400);
     }
 
     const otpRecord = await OTP.findOne({ email, otp });

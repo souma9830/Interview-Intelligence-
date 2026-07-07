@@ -1,5 +1,6 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { llmCache } = require('./cache/cacheManager');
+const { parseGeminiJson, clampScore } = require('../utils/geminiParser');
 
 const getModel = () => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -77,11 +78,7 @@ Rules:
   });
 
   let rawText = result.response.text().trim();
-  if (rawText.startsWith('```json')) rawText = rawText.substring(7);
-  if (rawText.startsWith('```')) rawText = rawText.substring(3);
-  if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3);
-
-  const data = JSON.parse(rawText.trim());
+  const data = parseGeminiJson(rawText);
   console.log(`[Gemini] Extracted ${data.skills?.length || 0} skills from resume.`);
   llmCache.set(cacheKey, data);
   return data;
@@ -140,12 +137,8 @@ Respond ONLY with a valid raw JSON object:
   });
 
   let rawText = result.response.text().trim();
-  if (rawText.startsWith('```json')) rawText = rawText.substring(7);
-  if (rawText.startsWith('```')) rawText = rawText.substring(3);
-  if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3);
-
-  const data = JSON.parse(rawText.trim());
-  data.matchPercentage = Math.min(Math.max(Number(data.matchPercentage) || 20, 10), 100);
+  const data = parseGeminiJson(rawText);
+  data.matchPercentage = clampScore(data.matchPercentage, 10, 100, 20);
 
   console.log(`[Gemini] JD match: ${data.matchPercentage}%, ${data.matchingSkills?.length} matching, ${data.missingSkills?.length} missing.`);
   const outputData = { success: true, source: 'gemini-2.5-flash', ...data };
@@ -238,11 +231,7 @@ Respond ONLY with a valid raw JSON object. Replace the bracketed text with your 
     });
 
     let rawText = result.response.text().trim();
-    if (rawText.startsWith('```json')) rawText = rawText.substring(7);
-    if (rawText.startsWith('```')) rawText = rawText.substring(3);
-    if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3);
-
-    const data = JSON.parse(rawText.trim());
+    const data = parseGeminiJson(rawText);
     console.log(`[Gemini] Generated ${(data.technical?.length || 0) + (data.hr?.length || 0) + (data.coding?.length || 0)} personalised questions.`);
     return data;
   } catch (err) {
@@ -357,13 +346,8 @@ CRITICAL RULES:
     });
 
     let rawText = result.response.text().trim();
-    if (rawText.startsWith('```json')) rawText = rawText.substring(7);
-    if (rawText.startsWith('```')) rawText = rawText.substring(3);
-    if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3);
-
-    const data = JSON.parse(rawText.trim());
-    const parsedScore = Number(data.score);
-    data.score = Math.min(Math.max(Number.isFinite(parsedScore) ? parsedScore : 0, 0), 10);
+    const data = parseGeminiJson(rawText);
+    data.score = clampScore(data.score, 0, 10, 0);
     console.log(`[Gemini] Answer evaluated. Score: ${data.score}/10, Verdict: ${data.verdict}`);
     return { success: true, ...data };
   } catch (err) {
@@ -430,16 +414,12 @@ Respond ONLY with a valid raw JSON object:
   });
 
   let rawText = result.response.text().trim();
-  if (rawText.startsWith('```json')) rawText = rawText.substring(7);
-  if (rawText.startsWith('```')) rawText = rawText.substring(3);
-  if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3);
-
-  const data = JSON.parse(rawText.trim());
+  const data = parseGeminiJson(rawText);
   // Clamp all scores
-  data.overallScore = Math.min(Math.max(Number(data.overallScore) || 60, 10), 100);
-  data.technicalScore = Math.min(Math.max(Number(data.technicalScore) || 60, 10), 100);
-  data.communicationScore = Math.min(Math.max(Number(data.communicationScore) || 60, 10), 100);
-  data.hrScore = Math.min(Math.max(Number(data.hrScore) || 60, 10), 100);
+  data.overallScore = clampScore(data.overallScore, 10, 100, 60);
+  data.technicalScore = clampScore(data.technicalScore, 10, 100, 60);
+  data.communicationScore = clampScore(data.communicationScore, 10, 100, 60);
+  data.hrScore = clampScore(data.hrScore, 10, 100, 60);
 
   console.log(`[Gemini] Report synthesized. Overall: ${data.overallScore}%, Recommendation: ${data.hiringRecommendation}`);
   return data;
@@ -525,11 +505,7 @@ ${pistonError || 'No errors.'}
     });
 
     let rawText = result.response.text().trim();
-    if (rawText.startsWith('\`\`\`json')) rawText = rawText.substring(7);
-    if (rawText.startsWith('\`\`\`')) rawText = rawText.substring(3);
-    if (rawText.endsWith('\`\`\`')) rawText = rawText.substring(0, rawText.length - 3);
-
-    return JSON.parse(rawText.trim());
+    return parseGeminiJson(rawText);
   } catch (error) {
     console.error('[Gemini] Code evaluation failed:', error);
     // Safe fallback if Gemini fails

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { useProctorOffline } from './useProctorOffline';
 
 export function useProctor({
   interviewId = 'demo_session_active',
@@ -9,7 +10,14 @@ export function useProctor({
   const visibilityHandlerRef = useRef(null);
   const fullscreenHandlerRef = useRef(null);
 
+  const { queueViolation } = useProctorOffline();
+
   const reportTelemetry = useCallback(async (eventType, description) => {
+    if (!navigator.onLine) {
+      console.log('[Proctor] Offline detected. Queuing telemetry locally.');
+      queueViolation(`${eventType}: ${description}`);
+      return;
+    }
     try {
       await fetch('/api/interview/telemetry', {
         method: 'POST',
@@ -24,7 +32,7 @@ export function useProctor({
     } catch (err) {
       console.warn('[Proctor] Telemetry report failed:', err.message);
     }
-  }, [interviewId]);
+  }, [interviewId, queueViolation]);
 
   useEffect(() => {
     if (!enabled || cheatWarningVisible) return;

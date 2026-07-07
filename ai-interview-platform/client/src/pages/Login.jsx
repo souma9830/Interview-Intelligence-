@@ -3,13 +3,161 @@ import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { auth, googleProvider } from '../firebase';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { sendPasswordReset } from '../services/auth';
-import { useToast } from '../components/Common/ToastContext';
-import {
-  inp, label, card, authPageContainer, authHeader, authSubtext,
-  btnPrimary, btnSecondary, iconPosition, inputGroup, inputError,
-  divider, dividerLine, dividerText, googleBtn,
-  showPasswordBtn, toggleLink, spinnerStyle
-} from '../utils/styleConstants';
+
+const card = {
+  background: '#111',
+  border: '1px solid #1e1e1e',
+  borderRadius: '12px',
+  padding: '32px',
+};
+
+const inp = (err) => ({
+  width: '100%',
+  background: '#0d0d0d',
+  border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`,
+  borderRadius: '8px',
+  padding: '10px 12px 10px 38px',
+  fontSize: '14px',
+  color: '#e0e0e0',
+  outline: 'none',
+  fontFamily: 'Inter, sans-serif',
+  boxSizing: 'border-box',
+  transition: 'border-color 0.15s',
+});
+
+const inputGroup = {
+  position: 'relative',
+};
+
+const iconPosition = {
+  position: 'absolute',
+  left: '11px',
+  top: '11px',
+};
+
+const label = {
+  fontSize: '12px',
+  fontWeight: '500',
+  color: '#888',
+  display: 'block',
+  marginBottom: '6px',
+};
+
+const btnPrimary = (loading, disabled) => ({
+  width: '100%',
+  padding: '11px',
+  background: loading || disabled ? '#1a1a1a' : '#fff',
+  color: loading || disabled ? '#555' : '#000',
+  border: 'none',
+  borderRadius: '8px',
+  fontSize: '14px',
+  fontWeight: '600',
+  cursor: loading || disabled ? 'not-allowed' : 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+  transition: 'all 0.15s',
+});
+
+const divider = {
+  display: 'flex',
+  alignItems: 'center',
+  margin: '4px 0',
+};
+
+const dividerLine = {
+  flex: 1,
+  height: '1px',
+  background: '#222',
+};
+
+const dividerText = {
+  margin: '0 12px',
+  fontSize: '12px',
+  color: '#666',
+  fontWeight: '500',
+};
+
+const authPageContainer = {
+  width: '100%',
+  maxWidth: '400px',
+  padding: '0 16px',
+  fontFamily: 'Inter, sans-serif',
+};
+
+const authHeader = {
+  fontSize: '20px',
+  fontWeight: '600',
+  color: '#fff',
+  margin: '0 0 4px',
+};
+
+const authSubtext = {
+  fontSize: '13px',
+  color: '#666',
+  margin: '0 0 24px',
+};
+
+const googleBtn = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+  width: '100%',
+  padding: '11px',
+  background: 'transparent',
+  color: '#fff',
+  border: '1px solid #333',
+  borderRadius: '8px',
+  fontSize: '14px',
+  fontWeight: '500',
+  cursor: 'pointer',
+  transition: 'all 0.15s',
+};
+
+const showPasswordBtn = {
+  position: 'absolute',
+  right: '10px',
+  top: '9px',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  color: '#555',
+  padding: '2px',
+};
+
+const inputError = {
+  fontSize: '12px',
+  color: '#ef4444',
+  margin: '4px 0 0',
+};
+
+const toggleLink = {
+  background: 'none',
+  border: 'none',
+  color: '#aaa',
+  fontWeight: '500',
+  cursor: 'pointer',
+  textDecoration: 'underline',
+  fontSize: '13px',
+};
+
+const spinnerStyle = {
+  animation: 'spin 1s linear infinite',
+};
+
+const toastContainer = (type) => ({
+  position: 'fixed',
+  top: '20px',
+  right: '20px',
+  padding: '12px 20px',
+  borderRadius: '8px',
+  background: type === 'err' ? '#ef4444' : '#22c55e',
+  color: '#fff',
+  fontSize: '14px',
+  zIndex: 1000,
+});
 
 export default function Login({ setToken, setUser, setCurrentTab }) {
   const [email, setEmail] = useState('');

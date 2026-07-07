@@ -13,7 +13,7 @@ exports.getHealthStatus = async (req, res, next) => {
       },
       timestamp: new Date().toISOString()
     };
-    res.status(200).json({ success: true, status: 'UP', data: health });
+    sendSuccess(res, health, 200, 'Service is healthy');
   } catch (error) {
     handleControllerError(res, error, 'Failed to get health status');
   }
