@@ -3,6 +3,7 @@ import { Code2, Terminal, Play, ChevronRight, FileCode, RefreshCw, Mic, MicOff, 
 import Editor from '@monaco-editor/react';
 import { useProctor } from '../hooks/useProctor';
 import { LoadingOverlay } from '../components/Common/LoadingOverlay';
+import Modal from '../components/Common/Modal';
 
 const LANGUAGE_BOILERPLATES = {
   javascript: {

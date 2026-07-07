@@ -6,8 +6,10 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Landing from './pages/Landing';
 import { ToastProvider } from './components/Common/ToastProvider';
-import { Loader2 } from 'lucide-react';
-import { ToastProvider } from './components/Common/ToastContext';
+import { LoadingOverlay } from './components/Common/LoadingOverlay';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { useMediaQuery } from './hooks/useMediaQuery';
+import { useKeyboardShortcuts, useShortcutsDialog } from './hooks/useKeyboardShortcuts';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
@@ -23,13 +25,13 @@ function LoadingScreen({ message = 'Loading workspace...' }) {
 
 export default function App() {
   const isOnline = useOnlineStatus();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const [token, setToken] = useState(localStorage.getItem('camsense_token') || '');
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(!!token);
   const [currentTab, setCurrentTab] = useState(token ? 'home' : 'landing');
 
   const [globalState, setGlobalState] = useState({
-  const isMobile = useMediaQuery('(max-width: 768px)');
     role: 'Frontend Engineer',
     experience: 'Mid-level (2-5 yrs)',
     resumeUploaded: false,

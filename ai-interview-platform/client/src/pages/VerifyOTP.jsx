@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, Loader2, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { isValidNumeric } from '../utils/security';
+import { useToast } from '../components/Common/ToastProvider';
+import { ErrorMessage } from '../components/Common/ErrorMessage';
 
 const inp = (err) => ({ width: '100%', background: '#0d0d0d', border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`, borderRadius: '8px', padding: '10px 12px 10px 38px', fontSize: '14px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box', transition: 'border-color 0.15s' });
 

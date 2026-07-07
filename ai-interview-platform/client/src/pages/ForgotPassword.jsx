@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { ErrorMessage } from '../components/Common/ErrorMessage';
+import { useToast } from '../components/Common/ToastProvider';
 
 const inp = (err) => ({ width: '100%', background: '#0d0d0d', border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`, borderRadius: '8px', padding: '10px 12px 10px 38px', fontSize: '14px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box', transition: 'border-color 0.15s' });
 
