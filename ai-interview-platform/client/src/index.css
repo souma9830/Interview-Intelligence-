@@ -73,11 +73,17 @@ button { font-family: 'Inter', sans-serif; }
   100% { background-position: -200% 0; }
 }
 
-@keyframes slideIn {
-  from { transform: translateY(12px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  aside, header, button {
+    display: none !important;
+  }
 }
 
-.chart-fade-in {
-  animation: slideIn 0.4s ease-out forwards;
+.pdf-btn-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }

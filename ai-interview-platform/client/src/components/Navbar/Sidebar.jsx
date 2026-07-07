@@ -3,29 +3,10 @@ import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarCh
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const S = {
-  aside: (collapsed) => ({
-    width: collapsed ? '64px' : '240px',
-    background: 'var(--bg-card)',
-    borderRight: '1px solid var(--border-color)',
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    padding: collapsed ? '24px 8px' : '24px 16px',
-    flexShrink: 0,
-    transition: 'all 0.25s ease',
-    overflow: 'hidden'
-  }),
-  logo: (collapsed) => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    padding: collapsed ? '0 0 20px' : '0 8px 20px',
-    marginBottom: '8px',
-    borderBottom: '1px solid var(--border-color)',
-    justifyContent: collapsed ? 'center' : 'flex-start'
-  }),
-  logoIcon: { width: '32px', height: '32px', background: '#fff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  logoText: { fontSize: '15px', fontWeight: '700', color: 'var(--color-primary)', letterSpacing: '-0.01em', whiteSpace: 'nowrap' },
+  aside: { width: '240px', background: 'var(--bg-card)', borderRight: '1px solid var(--border-color)', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '24px 16px', flexShrink: 0, transition: 'background 0.3s, border-color 0.3s' },
+  logo: { display: 'flex', alignItems: 'center', gap: '10px', padding: '0 8px 20px', marginBottom: '8px', borderBottom: '1px solid var(--border-color)' },
+  logoIcon: { width: '32px', height: '32px', background: 'var(--color-primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  logoText: { fontSize: '15px', fontWeight: '700', color: 'var(--color-primary)', letterSpacing: '-0.01em' },
   logoSub: { fontSize: '11px', color: '#888', marginTop: '1px' },
   navLabel: (collapsed) => ({
     fontSize: '10px',
