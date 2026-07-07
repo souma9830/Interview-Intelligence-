@@ -7,8 +7,7 @@ import Signup from './pages/Signup';
 import Landing from './pages/Landing';
 import { ToastProvider } from './components/Common/ToastProvider';
 import { Loader2 } from 'lucide-react';
-import ProtectedRoute from './components/Common/ProtectedRoute';
-import GuestRoute from './components/Common/GuestRoute';
+import { useDarkMode } from './hooks/useDarkMode';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
@@ -23,7 +22,7 @@ function LoadingScreen({ message = 'Loading workspace...' }) {
 }
 
 export default function App() {
-  const isOnline = useOnlineStatus();
+  useDarkMode();
   const [token, setToken] = useState(localStorage.getItem('camsense_token') || '');
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(!!token);
