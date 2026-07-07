@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Award, Download, CheckCircle, RefreshCw, Sparkles, BookOpen, ThumbsUp, HelpCircle, AlertCircle } from 'lucide-react';
-import { SkeletonCard } from '../components/Common/Skeleton';
-import { generateAssessmentPDF } from '../utils/pdfGenerator';
+import { jsPDF } from 'jspdf';
+import RadialProgress from '../components/Common/RadialProgress';
+import PerformanceChart from '../components/Common/PerformanceChart';
 
 const normalizeScore = (score, fallback = 0) => {
   const numericScore = Number(score);
@@ -23,54 +24,9 @@ export default function Result({ globalState, setGlobalState, setCurrentTab }) {
   const interviewId = globalState.interviewId || 'demo_session_active';
 
   const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
-
-  const synthesizeReport = async (signal) => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/report/synthesize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer demo_token_active'
-        },
-        body: JSON.stringify({ 
-          interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
-          role: selectedRole,
-          experience: experience,
-          questions: globalState.interviewQuestions || [],
-          answers: globalState.userAnswers || []
-        }),
-        signal
-      });
-      const resJson = await response.json();
-      if (resJson.success && resJson.data) {
-        let data = resJson.data;
-        const violations = globalState.violationCount || 0;
-        if (violations > 0) {
-          const deduction = Math.min(violations * 5, 25);
-          data.overallScore = Math.max(0, (data.overallScore || 80) - deduction);
-          data.weaknesses = [...(data.weaknesses || []), `Integrity Warning: Detected ${violations} instance(s) of tab-switching or exiting fullscreen mode.`];
-        }
-        data.resumeScore = data.resumeScore || 85;
-        data.interviewScore = data.interviewScore || 82;
-        data.codingScore = data.codingScore || 88;
-        setReportData(data);
-      } else {
-        triggerLocalFallback();
-      }
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        console.log('[Synthesize Aborted] Request was cancelled.');
-        return;
-      }
-      triggerLocalFallback();
-    }
-    return resJson;
-  }, [interviewId, selectedRole, experience, globalState.interviewQuestions, globalState.userAnswers, globalState.violationCount]);
-
-  const { loading } = useFetch(synthesizeReportFn, true);
 
   const triggerLocalFallback = () => {
     const isCodeGood = !!globalState.finalCode;
@@ -130,9 +86,55 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
 
   useEffect(() => {
     const controller = new AbortController();
-    synthesizeReport(controller.signal);
+
+    const synthesizeReport = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/report/synthesize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer demo_token_active'
+          },
+          body: JSON.stringify({ 
+            interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
+            role: selectedRole,
+            experience: experience,
+            questions: globalState.interviewQuestions || [],
+            answers: globalState.userAnswers || []
+          }),
+          signal: controller.signal
+        });
+        const resJson = await response.json();
+        if (resJson.success && resJson.data) {
+          let data = resJson.data;
+          const violations = globalState.violationCount || 0;
+          if (violations > 0) {
+            const deduction = Math.min(violations * 5, 25);
+            data.overallScore = Math.max(0, (data.overallScore || 80) - deduction);
+            data.weaknesses = [...(data.weaknesses || []), `Integrity Warning: Detected ${violations} instance(s) of tab-switching or exiting fullscreen mode.`];
+          }
+          data.resumeScore = data.resumeScore || 85;
+          data.interviewScore = data.interviewScore || 82;
+          data.codingScore = data.codingScore || 88;
+          setReportData(data);
+        } else {
+          triggerLocalFallback();
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          console.log('[Synthesize Aborted] Request was cancelled.');
+          return;
+        }
+        triggerLocalFallback();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    synthesizeReport();
     return () => controller.abort();
-  }, [interviewId, selectedRole]);
+  }, [interviewId, selectedRole, experience, globalState.interviewQuestions, globalState.userAnswers, globalState.violationCount]);
 
   const handleDownload = () => {
     if (!reportData) return;
@@ -149,7 +151,10 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
   if (loading) {
     return (
       <div style={{ maxWidth: '840px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
-        <LoadingOverlay message="Generating your comprehensive assessment report..." />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px', gap: '12px' }}>
+          <RefreshCw size={20} style={{ animation: 'spin 1s linear infinite' }} color="#888" />
+          <span style={{ fontSize: '13px', color: '#888' }}>Generating your comprehensive assessment report...</span>
+        </div>
       </div>
     );
   }
@@ -157,19 +162,17 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
   if (!reportData) {
     return (
       <div style={{ maxWidth: '840px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
-        <EmptyState
-          icon={AlertCircle}
-          title="No report data available"
-          message="Please complete an interview session before viewing results."
-          action={
-            <button
-              onClick={() => setCurrentTab('setup')}
-              style={{ marginTop: '16px', padding: '10px 20px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
-            >
-              Start Setup Session
-            </button>
-          }
-        />
+        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
+          <AlertCircle size={32} color="#333" style={{ margin: '0 auto 16px' }} />
+          <p style={{ fontSize: '14px', color: '#888', margin: '0 0 8px' }}>No report data available</p>
+          <p style={{ fontSize: '12px', color: '#555', margin: '0 0 16px' }}>Please complete an interview session before viewing results.</p>
+          <button
+            onClick={() => setCurrentTab('setup')}
+            style={{ marginTop: '8px', padding: '10px 20px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+          >
+            Start Setup Session
+          </button>
+        </div>
       </div>
     );
   }
