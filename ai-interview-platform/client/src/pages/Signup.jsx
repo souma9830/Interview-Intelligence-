@@ -35,7 +35,17 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       const fbUser = userCredential.user;
 
       const token = await fbUser.getIdToken();
-      
+
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name, email: fbUser.email, firebaseUid: fbUser.uid })
+        });
+      } catch (syncErr) {
+        console.warn('[Signup] MongoDB sync deferred:', syncErr.message);
+      }
+
       toast.show('Account created!', 'success');
       setTimeout(() => { 
         localStorage.setItem('camsense_token', token); 
@@ -60,6 +70,16 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
+
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: fbUser.displayName, email: fbUser.email, firebaseUid: fbUser.uid })
+        });
+      } catch (syncErr) {
+        console.warn('[Signup] MongoDB sync deferred:', syncErr.message);
+      }
 
       toast.show('Account created with Google!', 'success');
       setTimeout(() => { 

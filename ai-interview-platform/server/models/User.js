@@ -20,7 +20,13 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add a password'],
     minlength: 6,
-    select: false, // Prevents returning password by default in queries
+    select: false,
+  },
+  firebaseUid: {
+    type: String,
+    sparse: true,
+    unique: true,
+    default: null,
   },
   createdAt: {
     type: Date,
