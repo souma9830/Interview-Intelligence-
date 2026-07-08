@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, Loader2, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Lock, Loader2, ArrowRight, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { isValidNumeric } from '../utils/security';
 import { useToast } from '../components/Common/ToastProvider';
 import { ErrorMessage } from '../components/Common/ErrorMessage';
@@ -14,6 +14,9 @@ export default function VerifyOTP({ setCurrentTab }) {
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const { addToast } = useToast();
+  const [countdown, setCountdown] = useState(0);
+  const [resending, setResending] = useState(false);
+  const [resendDisabled, setResendDisabled] = useState(false);
 
   useEffect(() => {
     const storedEmail = localStorage.getItem('reset_email');
@@ -23,6 +26,13 @@ export default function VerifyOTP({ setCurrentTab }) {
       setCurrentTab('forgot-password');
     }
   }, [setCurrentTab]);
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [countdown]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,7 +58,7 @@ export default function VerifyOTP({ setCurrentTab }) {
         body: JSON.stringify({ email, otp, newPassword })
       });
       const data = await res.json();
-      
+
       if (data.success) {
         addToast('Password reset successfully!');
         setTimeout(() => {
@@ -62,6 +72,31 @@ export default function VerifyOTP({ setCurrentTab }) {
       setError('Network error, please try again');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    setResending(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/resend-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast('New OTP sent to your email');
+        setCountdown(60);
+        setResendDisabled(true);
+        setTimeout(() => setResendDisabled(false), 60000);
+      } else {
+        setError(data.message || 'Failed to resend OTP');
+      }
+    } catch {
+      setError('Network error, please try again');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -97,6 +132,16 @@ export default function VerifyOTP({ setCurrentTab }) {
           <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '8px', width: '100%', padding: '11px', background: loading ? '#1a1a1a' : '#fff', color: loading ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s ease' }}>
             {loading ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Verifying…</> : <>Reset Password <ArrowRight size={15} /></>}
           </button>
+
+          <div style={{ textAlign: 'center', paddingTop: '8px', borderTop: '1px solid #1e1e1e' }}>
+            <button type="button" onClick={handleResendOTP} disabled={resendDisabled || resending} style={{ background: 'none', border: 'none', color: resendDisabled ? '#555' : '#aaa', cursor: resendDisabled ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '500', display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'underline' }}>
+              {resending ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Resending…</> : <><RefreshCw size={13} /> {countdown > 0 ? `Resend in ${countdown}s` : 'Resend OTP'}</>}
+            </button>
+          </div>
+
+          <button type="button" onClick={() => setCurrentTab('forgot-password')} style={{ width: '100%', padding: '10px', background: 'transparent', color: '#aaa', border: '1px solid #333', borderRadius: '8px', fontSize: '13px', fontWeight: '500', cursor: 'pointer', marginTop: '4px' }}>
+            Back to forgot password
+          </button>
         </form>
       </div>
       <style>{`
@@ -107,6 +152,7 @@ export default function VerifyOTP({ setCurrentTab }) {
         .btn-primary:active:not(:disabled) {
           transform: scale(0.99);
         }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );
