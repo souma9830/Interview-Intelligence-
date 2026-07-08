@@ -36,5 +36,23 @@ const resumeUploadFields = upload.fields([
 router.post('/upload', protect, resumeUploadFields, uploadResume);
 router.get('/me', protect, getResume);
 router.post('/analyze-jd', protect, analyzeJobDescription);
+router.get('/status', protect, async (req, res) => {
+  try {
+    const userId = req.user ? req.user._id || req.user.uid : null;
+    const { getStorageAdapter } = require('../repositories/storageAdapter');
+    const storage = getStorageAdapter();
+    let resumeData = null;
+    if (storage && typeof storage.getResume === 'function') {
+      resumeData = await storage.getResume(userId);
+    }
+    if (!resumeData) {
+      const Resume = require('../models/Resume');
+      resumeData = await Resume.findOne({ user: userId }).lean();
+    }
+    res.json({ success: true, data: { hasResume: !!resumeData, resume: resumeData } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 module.exports = router;

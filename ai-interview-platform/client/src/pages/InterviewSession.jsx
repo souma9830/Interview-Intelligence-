@@ -12,9 +12,28 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
 
   // Redirect if no resume uploaded
   useEffect(() => {
-    if (!globalState.resumeUploaded) {
-      setCurrentTab('setup');
-    }
+    const verifyAccess = async () => {
+      if (!globalState.resumeUploaded) {
+        const token = localStorage.getItem('camsense_token');
+        if (token) {
+          try {
+            const res = await fetch('/api/resume/status', { headers: { Authorization: `Bearer ${token}` } });
+            const json = await res.json();
+            if (!json.success || !json.data?.hasResume) {
+              setCurrentTab('setup');
+              return;
+            }
+          } catch {
+            setCurrentTab('setup');
+            return;
+          }
+        } else {
+          setCurrentTab('setup');
+          return;
+        }
+      }
+    };
+    verifyAccess();
   }, [globalState.resumeUploaded, setCurrentTab]);
 
   // Initialize telemetry logs
