@@ -49,4 +49,11 @@ function clampScore(score, min = 0, max = 100, fallback = 50) {
   return Math.min(Math.max(Math.round(safe), min), max);
 }
 
-module.exports = { parseGeminiJson, clampScore };
+function parseScoreSafe(score, min = 0, max = 100, fallback = 50) {
+  if (score === null || score === undefined || score === 'N/A') return fallback;
+  const numeric = Number(score);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(Math.max(Math.round(numeric), min), max);
+}
+
+module.exports = { parseGeminiJson, clampScore, parseScoreSafe };
