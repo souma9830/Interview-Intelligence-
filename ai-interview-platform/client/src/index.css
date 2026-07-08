@@ -108,3 +108,20 @@ button { font-family: 'Inter', sans-serif; }
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s infinite;
 }
+
+.btn-primary:hover:not(:disabled) {
+  background: #e2e2e2 !important;
+  transform: scale(1.01);
+}
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.99);
+}
+.btn-google:hover {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: #555 !important;
+}
+.btn-secondary:hover {
+  color: #fff !important;
+  border-color: #666 !important;
+  background: rgba(255,255,255,0.02) !important;
+}
