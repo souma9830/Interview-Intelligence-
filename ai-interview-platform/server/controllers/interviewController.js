@@ -4,6 +4,7 @@ const { getStorageAdapter } = require('../repositories/storageAdapter');
 const CustomQuestionSet = require('../models/CustomQuestionSet');
 const cacheManager = require('../services/cache/cacheManager');
 const { sendSuccess, sendCreated, sendError, handleControllerError } = require('../utils/apiResponse');
+const jdoodleCompiler = require('../services/jdoodleCompiler');
 
 // @desc    Initialize a new mock interview session with Gemini-generated resume-based questions
 // @route   POST /api/interview/start

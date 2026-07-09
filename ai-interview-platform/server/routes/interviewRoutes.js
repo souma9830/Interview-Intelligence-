@@ -11,6 +11,7 @@ const { guardScheduleAccess } = require('../middleware/scheduleGuard');
 const { guardInterviewAccess } = require('../middleware/interviewGuard');
 const sandboxMiddleware = require('../middleware/sandboxMiddleware');
 
+// Code evaluation and execution routing with sandbox validation middleware
 // Set up memory storage parser for multer uploads
 const upload = multer({
   storage: multer.memoryStorage(),
