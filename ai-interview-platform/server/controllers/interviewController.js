@@ -1,4 +1,5 @@
 const { generateQuestionsFromResume, evaluateAnswer, synthesizeInterviewReport, evaluateCodingSolution } = require('../services/geminiService');
+const { parseScoreSafe } = require('../utils/geminiParser');
 const { getStorageAdapter } = require('../repositories/storageAdapter');
 const CustomQuestionSet = require('../models/CustomQuestionSet');
 const cacheManager = require('../services/cache/cacheManager');
@@ -15,8 +16,15 @@ exports.startInterview = async (req, res) => {
     if (!role || !experience) {
       return sendError(res, 'Please specify target role and experience', 400);
     }
-    if (!resumeText && (!Array.isArray(resumeSkills) || resumeSkills.length === 0) && !resumeSummary) {
+    if (!resumeText && (!Array.isArray(resumeSkills) || resumeSkills.length === 0) && !resumeSummary && !req.resumeData) {
       return sendError(res, 'Please upload and parse a resume before starting an interview session', 400);
+    }
+
+    if (req.resumeData) {
+      const fallbackText = req.resumeData.extractedText || '';
+      const fallbackSkills = req.resumeData.skills || resumeSkills || [];
+      if (!resumeText && fallbackText) req.body.resumeText = fallbackText;
+      if ((!resumeSkills || resumeSkills.length === 0) && fallbackSkills.length > 0) req.body.resumeSkills = fallbackSkills;
     }
 
     console.log(`[Interview Start] Generating Gemini-powered resume-based questions for role: ${role}`);

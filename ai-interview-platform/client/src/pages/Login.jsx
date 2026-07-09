@@ -185,6 +185,17 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
+
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: fbUser.displayName || email.split('@')[0], email: fbUser.email, firebaseUid: fbUser.uid })
+        });
+      } catch (syncErr) {
+        console.warn('[Login] MongoDB sync deferred:', syncErr.message);
+      }
+
       toast.show('Signed in successfully!', 'success');
       setTimeout(() => {
         localStorage.setItem('camsense_token', token);
@@ -207,6 +218,17 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
+
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: fbUser.displayName, email: fbUser.email, firebaseUid: fbUser.uid })
+        });
+      } catch (syncErr) {
+        console.warn('[Login] MongoDB sync deferred:', syncErr.message);
+      }
+
       toast.show('Signed in with Google!', 'success');
       setTimeout(() => {
         localStorage.setItem('camsense_token', token);
