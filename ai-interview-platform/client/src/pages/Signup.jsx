@@ -36,6 +36,10 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       try {
         await fetch('/api/auth/sync-user', {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: name || fbUser.displayName })
+        });
+      } catch {}
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ name, email: fbUser.email, firebaseUid: fbUser.uid })
         });
@@ -71,6 +75,10 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       try {
         await fetch('/api/auth/sync-user', {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: fbUser.displayName })
+        });
+      } catch {}
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ name: fbUser.displayName, email: fbUser.email, firebaseUid: fbUser.uid })
         });

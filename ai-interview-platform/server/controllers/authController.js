@@ -44,7 +44,8 @@ exports.logout = async (req, res, next) => {
 // @access  Public
 exports.forgotPassword = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    const { email: rawEmail } = req.body;
+    const email = (rawEmail || '').toLowerCase().trim();
 
     if (!validateEmail(email)) {
       return sendError(res, 'Please provide a valid email address', 400);
@@ -57,6 +58,17 @@ exports.forgotPassword = async (req, res, next) => {
       try {
         const fbUser = await admin.auth().getUserByEmail(email);
         if (fbUser) {
+          const User = require('../models/User');
+          user = await User.create({
+            name: fbUser.displayName || email.split('@')[0] || 'User',
+            email,
+            firebaseUid: fbUser.uid,
+            password: `fb_${fbUser.uid}_${Date.now()}`,
+          });
+          console.log(`[ForgotPassword] Auto-created MongoDB user for Firebase user: ${email}`);
+        }
+      } catch {
+        return sendError(res, 'There is no user with that email', 404);
           user = await User.create({
             name: fbUser.displayName || email.split('@')[0],
             email: fbUser.email,
@@ -76,6 +88,8 @@ exports.forgotPassword = async (req, res, next) => {
       email,
       otp
     });
+
+    const message = `Your password reset OTP is ${otp}. It is valid for 5 minutes.`;
     await OTP.create({ email, otp });
 
     try {
@@ -111,7 +125,8 @@ exports.forgotPassword = async (req, res, next) => {
 // @access  Public
 exports.verifyOTP = async (req, res, next) => {
   try {
-    const { email, otp, newPassword } = req.body;
+    const { email: rawEmail, otp, newPassword } = req.body;
+    const email = (rawEmail || '').toLowerCase().trim();
 
     if (!validateEmail(email)) {
       return sendError(res, 'Please provide a valid email address', 400);
@@ -173,6 +188,27 @@ exports.verifyOTP = async (req, res, next) => {
   }
 };
 
+// @desc    Sync Firebase user to MongoDB
+// @route   POST /api/auth/sync-user
+// @access  Public
+exports.syncUser = async (req, res, next) => {
+  try {
+    const { syncFirebaseUserToMongoDB } = require('../middleware/authMiddleware');
+    const { uid, email, name } = req.body;
+
+    if (!uid && !email) {
+      return sendError(res, 'Please provide uid or email', 400);
+    }
+
+    const firebaseUser = { uid, email: (email || '').toLowerCase().trim(), name };
+    const user = await syncFirebaseUserToMongoDB(firebaseUser);
+
+    if (user) {
+      return sendSuccess(res, { id: user._id, email: user.email, name: user.name }, 200, 'User synced successfully');
+    }
+    return sendError(res, 'Failed to sync user', 500);
+  } catch (error) {
+    handleControllerError(res, error, 'Failed to sync user');
 // @desc    Resend OTP for password reset
 // @route   POST /api/auth/resend-otp
 // @access  Public
