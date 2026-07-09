@@ -10,6 +10,7 @@ import { LoadingOverlay } from './components/Common/LoadingOverlay';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { useKeyboardShortcuts, useShortcutsDialog } from './hooks/useKeyboardShortcuts';
+import PwaInstallPrompt from './components/Common/PwaInstallPrompt';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
@@ -126,6 +127,7 @@ export default function App() {
           </main>
         </div>
       </div>
+      <PwaInstallPrompt />
     </ToastProvider>
   );
 }
