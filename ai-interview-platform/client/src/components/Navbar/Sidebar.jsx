@@ -70,6 +70,7 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
   const items = [
     { id: 'home', label: 'Home', icon: HomeIcon, disabled: false },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart2, disabled: false },
+    { id: 'schedule', label: 'Schedule', icon: Calendar, disabled: false },
     { id: 'setup', label: 'Interview Setup', icon: Settings, disabled: false },
     { id: 'session', label: 'AI Mock Session', icon: Mic, disabled: !isSetupDone },
     { id: 'coding', label: 'Coding Test', icon: Code2, disabled: !isSessionDone },

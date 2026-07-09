@@ -7,6 +7,7 @@ const router = express.Router();
 const interviewController = require('../controllers/interviewController');
 const questionController = require('../controllers/questionController');
 const { protect } = require('../middleware/authMiddleware');
+const { guardInterviewAccess } = require('../middleware/interviewGuard');
 const sandboxMiddleware = require('../middleware/sandboxMiddleware');
 
 // Set up memory storage parser for multer uploads
@@ -19,7 +20,7 @@ const upload = multer({
 
 // Secure all interview routing vectors using JWT protect middleware.
 // Cache headers are dynamically managed at the controller or CDN level.
-router.post('/start', protect, interviewController.startInterview);
+router.post('/start', protect, guardInterviewAccess, interviewController.startInterview);
 router.post('/answer', protect, interviewController.submitAnswer);
 router.post('/follow-up', protect, interviewController.submitAnswerAndGenerateFollowUp);
 router.post('/questions', protect, questionController.generateQuestion);

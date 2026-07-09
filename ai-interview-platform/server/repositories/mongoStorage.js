@@ -71,8 +71,16 @@ class MongoStorage extends StorageAdapter {
     return { ...schedule, _id: schedule._id || `schedule_${Date.now()}`, createdAt: schedule.createdAt || new Date() };
   }
 
-  async listSchedules() {
+  async listSchedules(userId) {
     return [];
+  }
+
+  async getSchedule(id) {
+    return null;
+  }
+
+  async deleteSchedule(id) {
+    return;
   }
 }
 
