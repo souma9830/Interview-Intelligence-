@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { User, Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { auth, googleProvider } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { useToast } from '../components/Common/ToastProvider';
+import { useFormValidation, validators, createField } from '../hooks/useFormValidation';
 
 const inp = (err) => ({ width: '100%', background: '#0d0d0d', border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`, borderRadius: '8px', padding: '10px 12px 10px 38px', fontSize: '14px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box', transition: 'border-color 0.15s' });
 
@@ -12,19 +13,15 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
   const toast = useToast();
 
-  const validate = () => {
-    const e = {};
-    if (!name.trim()) e.name = 'Full name is required';
-    if (!email) e.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) e.email = 'Enter a valid email';
-    if (!password) e.password = 'Password is required';
-    else if (password.length < 6) e.password = 'At least 6 characters';
-    setErrors(e);
-    return !Object.keys(e).length;
-  };
+  const fields = useMemo(() => [
+    createField('name', name, [validators.name], 'Full name'),
+    createField('email', email, [validators.required, validators.email], 'Email'),
+    createField('password', password, [validators.password]),
+  ], [name, email, password]);
+
+  const { errors, validate, clearError } = useFormValidation(fields);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,6 +36,10 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       try {
         await fetch('/api/auth/sync-user', {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: name || fbUser.displayName })
+        });
+      } catch {}
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ name, email: fbUser.email, firebaseUid: fbUser.uid })
         });
@@ -74,6 +75,10 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       try {
         await fetch('/api/auth/sync-user', {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: fbUser.displayName })
+        });
+      } catch {}
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ name: fbUser.displayName, email: fbUser.email, firebaseUid: fbUser.uid })
         });
@@ -105,7 +110,7 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
             <label style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>Full name</label>
             <div style={{ position: 'relative' }}>
               <User size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} />
-              <input type="text" placeholder="Your name" value={name} onChange={e => { setName(e.target.value); setErrors(p => ({ ...p, name: '' })); }} style={inp(errors.name)} />
+              <input type="text" placeholder="Your name" value={name} onChange={e => { setName(e.target.value); clearError('name'); }} style={inp(errors.name)} />
             </div>
             {errors.name && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{errors.name}</p>}
           </div>
@@ -114,7 +119,7 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
             <label style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>Email address</label>
             <div style={{ position: 'relative' }}>
               <Mail size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} />
-              <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); setErrors(p => ({ ...p, email: '' })); }} style={inp(errors.email)} />
+              <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); clearError('email'); }} style={inp(errors.email)} />
             </div>
             {errors.email && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{errors.email}</p>}
           </div>
@@ -123,7 +128,7 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
             <label style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>Password</label>
             <div style={{ position: 'relative' }}>
               <Lock size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} />
-              <input type={show ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); setErrors(p => ({ ...p, password: '' })); }} style={{ ...inp(errors.password), paddingRight: '38px' }} />
+              <input type={show ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); clearError('password'); }} style={{ ...inp(errors.password), paddingRight: '38px' }} />
               <button type="button" onClick={() => setShow(!show)} style={{ position: 'absolute', right: '10px', top: '9px', background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '2px' }}>
                 {show ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>

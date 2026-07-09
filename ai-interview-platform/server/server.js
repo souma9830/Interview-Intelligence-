@@ -16,6 +16,24 @@ const { connectDatabase, disconnectDatabase } = require('./utils/database');
 const startServer = async () => {
   await connectDatabase();
 
+  const nodemailer = require('nodemailer');
+  const smtpConfigured = process.env.SMTP_USER && process.env.SMTP_PASS;
+  if (smtpConfigured) {
+    try {
+      const testTransporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.mailtrap.io',
+        port: parseInt(process.env.SMTP_PORT, 10) || 2525,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+      await testTransporter.verify();
+      console.log('[SMTP] Connection verified successfully.');
+    } catch (err) {
+      console.warn(`[SMTP] Connection verification failed: ${err.message}. Emails may not be delivered.`);
+    }
+  } else {
+    console.warn('[SMTP] Not configured. Email functionality disabled.');
+  }
+
   const app = require('./app');
   const PORT = process.env.PORT || 5000;
 

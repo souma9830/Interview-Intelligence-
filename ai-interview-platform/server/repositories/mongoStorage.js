@@ -75,6 +75,8 @@ class MongoStorage extends StorageAdapter {
     return [];
   }
 
+  async deleteSchedule() {
+    return true;
   async getSchedule(id) {
     return null;
   }

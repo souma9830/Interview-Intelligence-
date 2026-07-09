@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { auth, googleProvider } from '../firebase';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { sendPasswordReset } from '../services/auth';
+import { useToast } from '../components/Common/ToastProvider';
+import { useFormValidation, validators, createField } from '../hooks/useFormValidation';
 
 const card = {
   background: '#111',
@@ -164,18 +166,14 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
   const toast = useToast();
 
-  const validate = () => {
-    const e = {};
-    if (!email) e.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) e.email = 'Enter a valid email';
-    if (!password) e.password = 'Password is required';
-    else if (password.length < 6) e.password = 'At least 6 characters';
-    setErrors(e);
-    return !Object.keys(e).length;
-  };
+  const fields = useMemo(() => [
+    createField('email', email, [validators.required, validators.email], 'Email'),
+    createField('password', password, [validators.password]),
+  ], [email, password]);
+
+  const { errors, validate, clearError } = useFormValidation(fields);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -185,6 +183,13 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: fbUser.displayName })
+        });
+      } catch {}
 
       try {
         await fetch('/api/auth/sync-user', {
@@ -218,6 +223,13 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: fbUser.displayName })
+        });
+      } catch {}
 
       try {
         await fetch('/api/auth/sync-user', {
@@ -252,7 +264,7 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
             <label style={label}>Email address</label>
             <div style={inputGroup}>
               <Mail size={15} color="#555" style={iconPosition} />
-              <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); setErrors(p => ({ ...p, email: '' })); }} style={inp(errors.email)} />
+              <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); clearError('email'); }} style={inp(errors.email)} />
             </div>
             {errors.email && <p style={inputError}>{errors.email}</p>}
           </div>
@@ -266,7 +278,7 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
             </div>
             <div style={inputGroup}>
               <Lock size={15} color="#555" style={iconPosition} />
-              <input type={show ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); setErrors(p => ({ ...p, password: '' })); }} style={{ ...inp(errors.password), paddingRight: '38px' }} />
+              <input type={show ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); clearError('password'); }} style={{ ...inp(errors.password), paddingRight: '38px' }} />
               <button type="button" onClick={() => setShow(!show)} style={showPasswordBtn}>
                 {show ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
