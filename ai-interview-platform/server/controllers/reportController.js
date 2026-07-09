@@ -31,7 +31,7 @@ exports.listReports = async (req, res) => {
 
 exports.synthesizeReport = async (req, res) => {
   try {
-    const { interviewId, role, experience, questions, answers } = req.body;
+    const { interviewId, role, experience, questions, answers, questionScores } = req.body;
     if (!interviewId && (!role || !experience)) {
       return sendError(res, 'Please provide interviewId or role and experience', 400);
     }
@@ -41,28 +41,31 @@ exports.synthesizeReport = async (req, res) => {
       category: q.category || 'technical',
       candidateAnswer: (answers && answers[i]) || '',
     }));
+    const scores = (questionScores && questionScores.length === qaList.length) ? questionScores : [];
     let reportData;
     try {
-      reportData = await synthesizeInterviewReport({ role, experience, qaList });
+      reportData = await synthesizeInterviewReport({ role, experience, qaList, questionScores: scores });
     } catch (geminiErr) {
       console.warn('[Report] Gemini synthesis failed:', geminiErr.message);
-      const avgScore = qaList.length > 0
-        ? Math.round(qaList.filter(q => q.candidateAnswer).length / qaList.length * 80 + 20)
-        : 75;
+      const avgScore = scores.length > 0
+        ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+        : qaList.length > 0
+          ? Math.round(qaList.filter(q => q.candidateAnswer).length / qaList.length * 80 + 20)
+          : 75;
       reportData = {
         overallScore: avgScore,
         technicalScore: avgScore,
-        communicationScore: avgScore - 5,
-        hrScore: avgScore - 10,
+        communicationScore: Math.max(avgScore - 5, 10),
+        hrScore: Math.max(avgScore - 10, 10),
         strengths: ['Demonstrated problem-solving ability', 'Clear communication style'],
         weaknesses: ['Could provide more detailed examples', 'Consider exploring edge cases further'],
         breakdown: {
           technicalDepth: avgScore,
-          problemSolvingApproach: avgScore + 5,
-          communicationClarity: avgScore - 5,
+          problemSolvingApproach: Math.min(avgScore + 5, 100),
+          communicationClarity: Math.max(avgScore - 5, 10),
           domainKnowledge: avgScore,
         },
-        hiringRecommendation: avgScore >= 75 ? 'Hire' : 'Maybe',
+        hiringRecommendation: avgScore >= 75 ? 'Hire' : avgScore >= 50 ? 'Maybe' : 'No Hire',
         feedbackReport: 'AI evaluation was temporarily unavailable. Scores are estimated based on response completeness.',
       };
     }

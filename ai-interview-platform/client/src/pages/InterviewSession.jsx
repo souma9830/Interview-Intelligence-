@@ -77,6 +77,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   const streamRef = useRef(null);
   const videoRef = useRef(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const [cameraInitialized, setCameraInitialized] = useState(false);
   const recognitionRef = useRef(null);
 
   const [timeLeft, setTimeLeft] = useState(60);
@@ -99,15 +100,22 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   }, [timerActive, timeLeft]);
 
   const startCamera = async () => {
+    if (cameraInitialized) return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: 'user' },
+        audio: { echoCancellation: true, noiseSuppression: true }
+      });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        setCameraActive(true);
       }
-    } catch {
+      setCameraActive(true);
+      setCameraInitialized(true);
+    } catch (err) {
+      console.warn('[Camera] Init failed:', err.message);
       setCameraActive(false);
+      setCameraInitialized(true);
     }
   };
 
@@ -115,12 +123,16 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
-      }
-      if (videoRef.current && videoRef.current.srcObject) {
-        videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (hasStarted && !cameraInitialized) {
+      startCamera();
+    }
+  }, [hasStarted, cameraInitialized]);
 
   const handleViolation = useCallback(() => {
     setIsCheatWarningVisible(true);
