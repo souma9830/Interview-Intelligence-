@@ -144,16 +144,6 @@ export default function VerifyOTP({ setCurrentTab }) {
           </button>
         </form>
       </div>
-      <style>{`
-        .btn-primary:hover:not(:disabled) {
-          background: #e2e2e2 !important;
-          transform: scale(1.01);
-        }
-        .btn-primary:active:not(:disabled) {
-          transform: scale(0.99);
-        }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
-    </div>
+      </div>
   );
 }
