@@ -1,0 +1,4 @@
+// Legacy auto save checks
+module.exports = {
+  saveIntervalMs: 30000
+};
