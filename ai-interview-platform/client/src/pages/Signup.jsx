@@ -4,6 +4,7 @@ import { auth, googleProvider } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { useToast } from '../components/Common/ToastProvider';
 import { useFormValidation, validators, createField } from '../hooks/useFormValidation';
+import PasswordStrengthMeter from '../components/Common/PasswordStrengthMeter';
 
 const inp = (err) => ({ width: '100%', background: '#0d0d0d', border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`, borderRadius: '8px', padding: '10px 12px 10px 38px', fontSize: '14px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box', transition: 'border-color 0.15s' });
 
@@ -133,6 +134,7 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
                 {show ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
+            <PasswordStrengthMeter password={password} />
             {errors.password && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{errors.password}</p>}
           </div>
 

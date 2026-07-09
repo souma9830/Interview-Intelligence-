@@ -6,6 +6,7 @@ import { sendPasswordReset } from '../services/auth';
 import { useToast } from '../components/Common/ToastProvider';
 import { useFormValidation, validators, createField } from '../hooks/useFormValidation';
 
+// Consumer of password strength indicators in related authentication pages
 const card = {
   background: '#111',
   border: '1px solid #1e1e1e',
