@@ -9,12 +9,17 @@ export default function ForgotPassword({ setCurrentTab }) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const { addToast } = useToast();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) {
       setError('Email is required');
+      return;
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setError('Please enter a valid email address');
       return;
     }
     setLoading(true);
@@ -27,12 +32,12 @@ export default function ForgotPassword({ setCurrentTab }) {
         body: JSON.stringify({ email })
       });
       const data = await res.json();
-      
+
       if (data.success) {
-        addToast('OTP sent to your email');
+        addToast('OTP sent to your email!');
+        setSuccess(true);
+        localStorage.setItem('reset_email', email);
         setTimeout(() => {
-          // Store email in local storage or pass via state, here we just use localStorage for simplicity
-          localStorage.setItem('reset_email', email);
           setCurrentTab('verify-otp');
         }, 1500);
       } else {
@@ -59,7 +64,7 @@ export default function ForgotPassword({ setCurrentTab }) {
             <label style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>Email address</label>
             <div style={{ position: 'relative' }}>
               <Mail size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} />
-              <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); setError(''); }} style={inp(error)} />
+              <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); setError(''); }} autoComplete="email" style={inp(error)} />
             </div>
             {error && <ErrorMessage message={error} style={{ marginTop: '4px' }} />}
           </div>
@@ -73,20 +78,6 @@ export default function ForgotPassword({ setCurrentTab }) {
           </button>
         </form>
       </div>
-      <style>{`
-        .btn-primary:hover:not(:disabled) {
-          background: #e2e2e2 !important;
-          transform: scale(1.01);
-        }
-        .btn-primary:active:not(:disabled) {
-          transform: scale(0.99);
-        }
-        .btn-secondary:hover {
-          color: #fff !important;
-          border-color: #666 !important;
-          background: rgba(255,255,255,0.02) !important;
-        }
-      `}</style>
-    </div>
+      </div>
   );
 }

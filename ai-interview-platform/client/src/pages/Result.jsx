@@ -101,7 +101,8 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
             role: selectedRole,
             experience: experience,
             questions: globalState.interviewQuestions || [],
-            answers: globalState.userAnswers || []
+            answers: globalState.userAnswers || [],
+            questionScores: globalState.questionScores || []
           }),
           signal: controller.signal
         });

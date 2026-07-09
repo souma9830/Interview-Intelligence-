@@ -7,6 +7,7 @@ const router = express.Router();
 const interviewController = require('../controllers/interviewController');
 const questionController = require('../controllers/questionController');
 const { protect } = require('../middleware/authMiddleware');
+const { guardInterviewAccess } = require('../middleware/interviewGuard');
 const sandboxMiddleware = require('../middleware/sandboxMiddleware');
 const { validate } = require('../middleware/validators/validateMiddleware');
 const {
@@ -25,6 +26,11 @@ const upload = multer({
 router.post('/start', protect, startInterviewValidator, validate, interviewController.startInterview);
 router.post('/answer', protect, submitAnswerValidator, validate, interviewController.submitAnswer);
 router.post('/follow-up', protect, followUpValidator, validate, interviewController.submitAnswerAndGenerateFollowUp);
+// Secure all interview routing vectors using JWT protect middleware.
+// Cache headers are dynamically managed at the controller or CDN level.
+router.post('/start', protect, guardInterviewAccess, interviewController.startInterview);
+router.post('/answer', protect, interviewController.submitAnswer);
+router.post('/follow-up', protect, interviewController.submitAnswerAndGenerateFollowUp);
 router.post('/questions', protect, questionController.generateQuestion);
 router.post('/coding/eval', protect, sandboxMiddleware.validateSandboxPayload, evaluateCodeValidator, validate, interviewController.evaluateCode);
 router.post('/evaluate-answer', protect, interviewController.evaluateAnswerRealtime);

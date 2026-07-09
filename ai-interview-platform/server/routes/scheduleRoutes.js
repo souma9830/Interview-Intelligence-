@@ -8,5 +8,8 @@ const { createScheduleValidator, scheduleIdValidator } = require('../middleware/
 router.get('/', protect, scheduleController.listSchedules);
 router.post('/', protect, createScheduleValidator, validate, scheduleController.createSchedule);
 router.get('/:id', protect, scheduleIdValidator, validate, scheduleController.getSchedule);
+router.post('/', protect, scheduleController.createSchedule);
+router.get('/:id', protect, scheduleController.getSchedule);
+router.delete('/:id', protect, scheduleController.deleteSchedule);
 
 module.exports = router;
