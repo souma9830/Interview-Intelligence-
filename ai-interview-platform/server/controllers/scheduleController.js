@@ -71,14 +71,6 @@ exports.deleteSchedule = async (req, res) => {
     }
     const storage = getStorageAdapter();
     await storage.deleteSchedule(id);
-    const scheduleId = req.params.id;
-    if (!scheduleId) {
-      return sendError(res, 'Schedule ID is required', 400);
-    }
-    const storage = getStorageAdapter();
-    if (storage && typeof storage.deleteSchedule === 'function') {
-      await storage.deleteSchedule(scheduleId);
-    }
     sendSuccess(res, null, 200, 'Schedule deleted successfully');
   } catch (error) {
     handleControllerError(res, error, 'Failed to delete schedule');

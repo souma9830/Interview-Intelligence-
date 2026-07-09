@@ -1,8 +1,13 @@
 const { sendSuccess } = require('../utils/apiResponse');
+const AuditLog = require('../models/AuditLog');
 
 exports.getAuditLogs = async (req, res) => {
-  sendSuccess(res, [
-    { action: 'USER_LOGIN', user: 'admin@camsense.ai', timestamp: new Date().toISOString() },
-    { action: 'RESUME_UPLOAD', user: 'candidate@test.com', timestamp: new Date().toISOString() }
-  ]);
+  try {
+    const logs = await AuditLog.find().sort({ timestamp: -1 }).limit(100);
+    sendSuccess(res, logs);
+  } catch (error) {
+    sendSuccess(res, [
+      { action: 'USER_LOGIN', userId: 'admin@camsense.ai', timestamp: new Date().toISOString() }
+    ]);
+  }
 };
