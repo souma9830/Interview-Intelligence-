@@ -65,6 +65,12 @@ exports.createSchedule = async (req, res) => {
 
 exports.deleteSchedule = async (req, res) => {
   try {
+    const { id } = req.params;
+    if (!id) {
+      return sendError(res, 'Schedule ID is required', 400);
+    }
+    const storage = getStorageAdapter();
+    await storage.deleteSchedule(id);
     const scheduleId = req.params.id;
     if (!scheduleId) {
       return sendError(res, 'Schedule ID is required', 400);

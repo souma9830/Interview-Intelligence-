@@ -15,7 +15,10 @@ const configCheck = require('./utils/configCheck');
 
 const configStatus = configCheck.check();
 if (!configStatus.valid) {
-  console.warn(`[Configuration Warning] Missing environment variables: ${configStatus.missing.join(', ')}`);
+  console.warn(`[Configuration Warning] Missing required environment variables: ${configStatus.missing.join(', ')}`);
+}
+if (!configStatus.smtpConfigured) {
+  console.warn(`[Configuration Warning] SMTP not fully configured (missing: ${configStatus.smtpMissing.join(', ')}). Email delivery will fail.`);
 }
 
 const rateLimiter = require('./middleware/rateLimiter');
