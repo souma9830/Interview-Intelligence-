@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, Plus, Loader2, Lock, Trash2, ExternalLink } from 'lucide-react';
-import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, Plus, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, Plus, Loader2, Lock, Trash2, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
 import { Pagination } from '../components/Common/Pagination';
 import { useFetch } from '../hooks/useFetch';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { SkeletonCard, SkeletonStatCard } from '../components/Common/Skeleton';
+import EmptyState from '../components/Common/EmptyState';
 
 const ITEMS_PER_PAGE = 5;
 

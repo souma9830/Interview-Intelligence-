@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 import RadialProgress from '../components/Common/RadialProgress';
 import PerformanceChart from '../components/Common/PerformanceChart';
 import ReportExportModal from '../components/Common/ReportExportModal';
+import EmptyState from '../components/Common/EmptyState';
 
 const normalizeScore = (score, fallback = 0) => {
   const numericScore = Number(score);
