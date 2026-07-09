@@ -1,4 +1,0 @@
-// Obsolete inline hotkey setups
-module.exports = {
-  keyMap: { ESC: 'close' }
-};

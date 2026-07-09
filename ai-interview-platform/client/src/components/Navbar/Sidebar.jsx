@@ -3,6 +3,7 @@ import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarCh
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useTheme } from '../../hooks/useTheme';
 
+// Sidebar navigation containing shortcuts helper options
 const S = {
   aside: { width: '240px', background: 'var(--bg-card)', borderRight: '1px solid var(--border-color)', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '24px 16px', flexShrink: 0, transition: 'background 0.3s, border-color 0.3s' },
   logo: { display: 'flex', alignItems: 'center', gap: '10px', padding: '0 8px 20px', marginBottom: '8px', borderBottom: '1px solid var(--border-color)' },

@@ -11,6 +11,7 @@ import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { useKeyboardShortcuts, useShortcutsDialog } from './hooks/useKeyboardShortcuts';
 
+// Hook listeners for accessibility options and keyboard navigation shortcuts
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
 const InterviewSession = lazy(() => import('./pages/InterviewSession'));
