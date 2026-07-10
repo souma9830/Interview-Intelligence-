@@ -64,6 +64,7 @@ export default function App() {
     's': { label: 'Go to Interview Setup', category: 'Navigation', onPress: () => navigateTo('setup') },
     'k': { label: 'Go to Schedule', category: 'Navigation', onPress: () => navigateTo('schedule') },
     'r': { label: 'Go to Results', category: 'Navigation', onPress: () => navigateTo('result') },
+    'k': { label: 'Go to Schedule', category: 'Navigation', onPress: () => navigateTo('schedule') },
     'Escape': { label: 'Close dialog or cancel', category: 'General', onPress: shortcutsDialog.close },
   }), [shortcutsDialog, navigateTo]);
 
@@ -105,6 +106,7 @@ export default function App() {
       case 'session': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><InterviewSession globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       case 'coding': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><CodingTest globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       case 'result': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Result globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'schedule': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><ScheduleInterview setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       default: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Home setCurrentTab={setCurrentTab} /></ProtectedRoute>;
     }
   };

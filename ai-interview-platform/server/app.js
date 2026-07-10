@@ -12,10 +12,11 @@ const requestLogger = require('./middleware/logging/requestLogger');
 
 const { globalErrorHandler, notFoundHandler } = require('./middleware/error/errorHandler');
 const configCheck = require('./utils/configCheck');
+const logger = require('./services/logger');
 
 const configStatus = configCheck.check();
 if (!configStatus.valid) {
-  console.warn(`[Configuration Warning] Missing environment variables: ${configStatus.missing.join(', ')}`);
+  logger.warn('Missing environment variables', { missing: configStatus.missing });
 }
 
 const rateLimiter = require('./middleware/rateLimiter');
@@ -23,7 +24,7 @@ const rateLimiter = require('./middleware/rateLimiter');
 const app = express();
 
 if (!process.env.JWT_SECRET) {
-  console.warn('[Security Warning] JWT_SECRET environment variable is missing. Using default signing key.');
+  logger.warn('JWT_SECRET environment variable is missing. Using default signing key.');
 }
 
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
@@ -35,7 +36,7 @@ const corsOptions = {
     if (!origin || ALLOWED_ORIGINS.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.warn(`[CORS] Blocked request from origin: ${origin}`);
+      logger.warn('Blocked request from origin', { origin });
       callback(null, false);
     }
   },

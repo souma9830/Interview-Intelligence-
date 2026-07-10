@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Award, Download, CheckCircle, RefreshCw, Sparkles, BookOpen, ThumbsUp, HelpCircle, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Award, Download, CheckCircle, RefreshCw, Sparkles, BookOpen, ThumbsUp, HelpCircle, AlertCircle, Printer } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import RadialProgress from '../components/Common/RadialProgress';
 import PerformanceChart from '../components/Common/PerformanceChart';
+import ReportExportModal from '../components/Common/ReportExportModal';
 
 const normalizeScore = (score, fallback = 0) => {
   const numericScore = Number(score);
@@ -27,6 +28,7 @@ export default function Result({ globalState, setGlobalState, setCurrentTab }) {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
 
   const triggerLocalFallback = () => {
     const isCodeGood = !!globalState.finalCode;
@@ -137,7 +139,7 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
     return () => controller.abort();
   }, [interviewId, selectedRole, experience, globalState.interviewQuestions, globalState.userAnswers, globalState.violationCount]);
 
-  const handleDownload = () => {
+  const handleDownload = useCallback(() => {
     if (!reportData) return;
     const exportReport = normalizeReportScores(reportData);
     setDownloading(true);
@@ -147,7 +149,11 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
       setDownloaded(true);
       generateAssessmentPDF(exportReport, selectedRole);
     }, 1000);
-  };
+  }, [reportData, selectedRole]);
+
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
 
   if (loading) {
     return (
@@ -211,16 +217,15 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
             </div>
 
             <button
-              onClick={handleDownload}
-              disabled={downloading}
+              onClick={() => setExportModalOpen(true)}
               style={{
-                width: '100%', padding: '10px', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: downloading ? 'not-allowed' : 'pointer',
-                background: downloading ? '#1a1a1a' : '#fff',
-                color: downloading ? '#555' : '#000',
+                width: '100%', padding: '10px', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                background: '#fff',
+                color: '#000',
                 transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               }}
             >
-              {downloading ? 'Compiling PDF…' : downloaded ? 'Report Exported' : 'Export System PDF'}
+              <Download size={14} /> Export Report
             </button>
           </div>
         </div>
@@ -358,6 +363,14 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
         </button>
       </div>
 
+    <ReportExportModal
+        open={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        onDownload={handleDownload}
+        onPrint={handlePrint}
+        downloading={downloading}
+        downloaded={downloaded}
+      />
     </div>
   );
 }

@@ -27,6 +27,8 @@ router.post('/resend-otp', otpLimiter, authController.resendOTP);
 router.post('/refresh', authController.refreshToken);
 router.post('/sync-user', syncUserValidator, validate, authController.syncUser);
 
+// Sync Firebase user to MongoDB (used after Firebase signup/login)
+router.post('/sync-user', authController.syncUser);
 // Firebase-MongoDB user sync route
 router.post('/sync-user', protect, authController.syncUser);
 

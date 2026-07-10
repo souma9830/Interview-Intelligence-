@@ -71,6 +71,7 @@ exports.startInterview = async (req, res) => {
       resumeSkills: resumeSkills || [],
       questions: questionsList,
       status: 'speaking_active',
+      scheduleId: req.activeSchedule ? req.activeSchedule._id || req.activeSchedule.id : null,
     };
 
     const persisted = await getStorageAdapter().saveInterview(interviewData);

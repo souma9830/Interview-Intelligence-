@@ -1,4 +1,5 @@
 const { sendError } = require('../../utils/apiResponse');
+const logger = require('../../services/logger');
 
 class ApiError extends Error {
   constructor(statusCode, message, details = null) {
@@ -35,6 +36,18 @@ const globalErrorHandler = (err, req, res, _next) => {
       errors: fields,
       timestamp: new Date().toISOString(),
     });
+  const logMeta = {
+    requestId: req.requestId,
+    userId: req.user ? req.user._id || req.user.uid : null,
+    clientIp: req.ip,
+    method: req.method,
+    url: req.originalUrl,
+  };
+
+  if (isServerError) {
+    logger.error(err.message, { ...logMeta, stack: err.stack });
+  } else {
+    logger.warn(err.message, logMeta);
   }
 
   if (err.name === 'CastError') {
