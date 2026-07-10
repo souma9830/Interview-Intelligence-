@@ -25,6 +25,11 @@ const connectDatabase = async () => {
     isConnected = true;
     console.log(`[Database] MongoDB connected: ${conn.connection.host}`);
 
+    const { runMigrations } = require('../db/migrations/migrationRunner');
+    runMigrations().catch(err => {
+      console.error('[Database] Migration error:', err.message);
+    });
+
     mongoose.connection.on('error', (err) => {
       console.error('[Database] Connection error:', err.message);
       isConnected = false;
