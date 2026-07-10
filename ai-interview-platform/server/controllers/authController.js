@@ -55,42 +55,15 @@ exports.forgotPassword = async (req, res, next) => {
 
     if (!user) {
       return sendError(res, 'No account found with this email address', 404);
-      try {
-        const fbUser = await admin.auth().getUserByEmail(email);
-        if (fbUser) {
-          const User = require('../models/User');
-          user = await User.create({
-            name: fbUser.displayName || email.split('@')[0] || 'User',
-            email,
-            firebaseUid: fbUser.uid,
-            password: `fb_${fbUser.uid}_${Date.now()}`,
-          });
-          console.log(`[ForgotPassword] Auto-created MongoDB user for Firebase user: ${email}`);
-        }
-      } catch {
-        return sendError(res, 'There is no user with that email', 404);
-          user = await User.create({
-            name: fbUser.displayName || email.split('@')[0],
-            email: fbUser.email,
-            password: crypto.randomBytes(16).toString('hex'),
-            firebaseUid: fbUser.uid
-          });
-          console.log(`[Auth] Auto-created MongoDB record for Firebase user: ${email}`);
-        }
-      } catch (fbErr) {
-        return sendError(res, 'No account found with this email address', 404);
-      }
     }
 
     const otp = crypto.randomInt(100000, 999999).toString();
 
+    await OTP.deleteMany({ email });
     await OTP.create({
       email,
       otp
     });
-
-    const message = `Your password reset OTP is ${otp}. It is valid for 5 minutes.`;
-    await OTP.create({ email, otp });
 
     try {
       const result = await notificationService.send({
@@ -99,18 +72,12 @@ exports.forgotPassword = async (req, res, next) => {
         message: `Your password reset OTP is ${otp}. It is valid for 5 minutes. Do not share this code with anyone.`
       });
 
-      if (!result.success) {
-        await OTP.deleteMany({ email });
-        return sendError(res, 'Unable to send OTP email. Please check your email configuration or try again later.', 500);
-      }
-
-      sendSuccess(res, { email: user.email }, 200, 'OTP sent successfully to your registered email');
       if (!result || !result.success) {
         await OTP.deleteMany({ email });
         return sendError(res, 'Failed to send OTP email. Please try again later.', 500);
       }
 
-      sendSuccess(res, 'OTP sent successfully to your registered email', 200);
+      sendSuccess(res, { email: user.email }, 200, 'OTP sent successfully to your registered email');
     } catch (err) {
       await OTP.deleteMany({ email });
       return sendError(res, 'Email service unavailable. Please try again later.', 500);
@@ -206,9 +173,11 @@ exports.syncUser = async (req, res, next) => {
     if (user) {
       return sendSuccess(res, { id: user._id, email: user.email, name: user.name }, 200, 'User synced successfully');
     }
-    return sendError(res, 'Failed to sync user', 500);
   } catch (error) {
     handleControllerError(res, error, 'Failed to sync user');
+  }
+};
+
 // @desc    Resend OTP for password reset
 // @route   POST /api/auth/resend-otp
 // @access  Public

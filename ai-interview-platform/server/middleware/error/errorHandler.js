@@ -18,8 +18,12 @@ const notFoundHandler = (req, res, _next) => {
 };
 
 const globalErrorHandler = (err, req, res, _next) => {
-  const statusCode = err.statusCode || err.status || 500;
-  const isServerError = statusCode >= 500;
+  let statusCode = err.statusCode || err.status || 500;
+
+  if (err.name === 'MulterError') {
+    statusCode = 400;
+    return sendError(res, `Upload error: ${err.message}`, 400);
+  }
 
   if (isServerError) {
     ErrorTracker.capture(err, {
@@ -30,6 +34,17 @@ const globalErrorHandler = (err, req, res, _next) => {
       requestId: req.requestId,
       ip: req.ip,
       userAgent: req.get('user-agent'),
+  if (err.name === 'ValidationError' && err.errors) {
+    statusCode = 400;
+    const fields = Object.keys(err.errors).map(f => ({
+      field: f,
+      message: err.errors[f].message,
+    }));
+    return res.status(400).json({
+      success: false,
+      message: 'Validation failed',
+      errors: fields,
+      timestamp: new Date().toISOString(),
     });
   const logMeta = {
     requestId: req.requestId,
@@ -45,11 +60,24 @@ const globalErrorHandler = (err, req, res, _next) => {
     logger.warn(err.message, logMeta);
   }
 
+  if (err.name === 'CastError') {
+    statusCode = 400;
+    return sendError(res, `Invalid ${err.path}: ${err.value}`, 400);
+  }
+
+  if (err.code === 11000) {
+    statusCode = 409;
+    const field = Object.keys(err.keyValue || {})[0] || 'field';
+    return sendError(res, `Duplicate value for ${field}`, 409);
+  }
+
+  const isServerError = statusCode >= 500;
+  const message = isServerError ? 'Internal Server Error' : (err.message || 'An error occurred');
+
   if (res.headersSent) {
     return;
   }
 
-  const message = isServerError ? 'Internal Server Error' : (err.message || 'An error occurred');
   return sendError(res, message, statusCode, err.details);
 };
 
