@@ -1,3 +1,5 @@
+const logger = require('../services/logger');
+
 class AppError extends Error {
   constructor(message, statusCode) {
     super(message);
@@ -34,7 +36,7 @@ function handleControllerError(res, error, defaultMessage = 'Internal server err
   if (error instanceof AppError) {
     return sendError(res, error.message, error.statusCode);
   }
-  console.error(`[API Error] ${defaultMessage}:`, error.message || error);
+  logger.error(`Controller error: ${defaultMessage}`, { error: error.message, stack: error.stack });
   return sendError(res, defaultMessage, 500);
 }
 

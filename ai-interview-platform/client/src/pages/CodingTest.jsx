@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Code2, Terminal, Play, ChevronRight, FileCode, RefreshCw, Mic, MicOff, AlertCircle, Award } from 'lucide-react';
-import Editor from '@monaco-editor/react';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useProctor } from '../hooks/useProctor';
 import { LoadingOverlay } from '../components/Common/LoadingOverlay';
+import { MonacoEditorWrapper } from '../components/Common/MonacoEditorWrapper';
 import Modal from '../components/Common/Modal';
 
 const LANGUAGE_BOILERPLATES = {
@@ -90,6 +91,7 @@ const ROLE_PROBLEMS = {
 };
 
 export default function CodingTest({ globalState, setGlobalState, setCurrentTab }) {
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const selectedRole = globalState.role || 'Frontend Engineer';
   const aiCodingQuestion = globalState.questions?.find(q => q.category === 'coding');
   
@@ -366,7 +368,7 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
       </div>
 
       {/* Primary Grid Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '5fr 7fr', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '5fr 7fr', gap: '20px' }}>
         
         {/* Left Side: Requirements & Explain Logic verbally */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -440,22 +442,10 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
 
             {/* Monaco wrapper */}
             <div style={{ flex: 1, minHeight: 0 }}>
-              <Editor
-                height="100%"
+              <MonacoEditorWrapper
                 language={language}
-                theme="vs-dark"
                 value={code}
                 onChange={v => setCode(v || '')}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                  lineHeight: 20,
-                  padding: { top: 12, bottom: 12 },
-                  scrollBeyondLastLine: false,
-                  cursorBlinking: "smooth",
-                }}
-                loading={<LoadingOverlay message="Initializing Editor..." />}
               />
             </div>
           </div>

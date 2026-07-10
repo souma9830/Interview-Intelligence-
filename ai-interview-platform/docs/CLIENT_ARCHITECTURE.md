@@ -32,12 +32,15 @@ client/src/
       KeyboardShortcutsDialog.jsx
       LoadingOverlay.jsx     # Full-page loading spinner
       Modal.jsx              # Accessible modal with focus trap
+      MonacoEditorWrapper.jsx # Monaco editor with error boundary
       OfflineBanner.jsx      # Network status banner
       Pagination.jsx         # Page navigation
       PerformanceChart.jsx   # Score visualization
       RadialProgress.jsx     # Circular progress indicator
+      ReportExportModal.jsx  # PDF report export dialog
       Skeleton.jsx           # Loading skeleton components
       ThemeToggle.jsx        # Dark/light mode toggle
+      ThemeToggler.jsx       # Alternate theme toggle
       Toast.jsx              # Toast notification container
       ToastProvider.jsx      # Toast context provider
       index.js               # Barrel exports
@@ -59,6 +62,7 @@ client/src/
     useAbortableEffect.js    # Effect with AbortController
     useFetch.js              # Generic data fetching hook
     useFocusTrap.js          # Modal focus trapping
+    useFormValidation.js     # Declarative form validation
     useKeyboardShortcuts.js  # Global keyboard shortcuts
     useMediaDevices.js       # WebRTC device enumeration
     useMediaQuery.js         # Responsive breakpoint detection
@@ -90,8 +94,11 @@ client/src/
     apiSignals.js            # AbortController factory
     audioConstraints.js      # WebRTC audio/video config
     authHeaders.js           # Bearer token helper
+    offlineQueue.js          # Offline violation event queue
+    pdfGenerator.js          # PDF report generation (jsPDF)
+    pdfThemes.js             # PDF styling themes
     security.js              # Input sanitization
-    styleConstants.js        # Shared style definitions
+    telemetryConstants.js    # Telemetry event type constants
 ```
 
 ## Component Hierarchy

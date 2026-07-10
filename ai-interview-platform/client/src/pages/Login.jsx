@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { auth, googleProvider } from '../firebase';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { sendPasswordReset } from '../services/auth';
+import { useToast } from '../components/Common/ToastProvider';
+import { useFormValidation, validators, createField } from '../hooks/useFormValidation';
 
 const card = {
   background: '#111',
@@ -164,18 +166,14 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
   const toast = useToast();
 
-  const validate = () => {
-    const e = {};
-    if (!email) e.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) e.email = 'Enter a valid email';
-    if (!password) e.password = 'Password is required';
-    else if (password.length < 6) e.password = 'At least 6 characters';
-    setErrors(e);
-    return !Object.keys(e).length;
-  };
+  const fields = useMemo(() => [
+    createField('email', email, [validators.required, validators.email], 'Email'),
+    createField('password', password, [validators.password]),
+  ], [email, password]);
+
+  const { errors, validate, clearError } = useFormValidation(fields);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -185,6 +183,24 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: fbUser.displayName })
+        });
+      } catch {}
+
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: fbUser.displayName || email.split('@')[0], email: fbUser.email, firebaseUid: fbUser.uid })
+        });
+      } catch (syncErr) {
+        console.warn('[Login] MongoDB sync deferred:', syncErr.message);
+      }
+
       toast.show('Signed in successfully!', 'success');
       setTimeout(() => {
         localStorage.setItem('camsense_token', token);
@@ -207,6 +223,24 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: fbUser.displayName })
+        });
+      } catch {}
+
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: fbUser.displayName, email: fbUser.email, firebaseUid: fbUser.uid })
+        });
+      } catch (syncErr) {
+        console.warn('[Login] MongoDB sync deferred:', syncErr.message);
+      }
+
       toast.show('Signed in with Google!', 'success');
       setTimeout(() => {
         localStorage.setItem('camsense_token', token);
@@ -230,7 +264,7 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
             <label style={label}>Email address</label>
             <div style={inputGroup}>
               <Mail size={15} color="#555" style={iconPosition} />
-              <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); setErrors(p => ({ ...p, email: '' })); }} style={inp(errors.email)} />
+              <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); clearError('email'); }} style={inp(errors.email)} />
             </div>
             {errors.email && <p style={inputError}>{errors.email}</p>}
           </div>
@@ -244,7 +278,7 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
             </div>
             <div style={inputGroup}>
               <Lock size={15} color="#555" style={iconPosition} />
-              <input type={show ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); setErrors(p => ({ ...p, password: '' })); }} style={{ ...inp(errors.password), paddingRight: '38px' }} />
+              <input type={show ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); clearError('password'); }} style={{ ...inp(errors.password), paddingRight: '38px' }} />
               <button type="button" onClick={() => setShow(!show)} style={showPasswordBtn}>
                 {show ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
@@ -252,7 +286,7 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
             {errors.password && <p style={inputError}>{errors.password}</p>}
           </div>
 
-          <button type="submit" disabled={loading} style={btnPrimary(loading, false)}>
+          <button type="submit" disabled={loading} className="btn-primary" style={btnPrimary(loading, false)}>
             {loading ? <><Loader2 size={15} style={spinnerStyle} /> Signing in…</> : <>Sign in <ArrowRight size={15} /></>}
           </button>
 
@@ -262,7 +296,7 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
             <div style={dividerLine} />
           </div>
 
-          <button type="button" onClick={handleGoogleLogin} style={googleBtn}>
+          <button type="button" onClick={handleGoogleLogin} className="btn-google" style={googleBtn}>
             <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -280,6 +314,6 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
           </button>
         </p>
       </div>
-    </div>
+      </div>
   );
 }
