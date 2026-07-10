@@ -29,3 +29,7 @@ uploads/
 
 # Database backups
 /ai-interview-platform/backups/
+
+# Logs
+logs/
+*.log

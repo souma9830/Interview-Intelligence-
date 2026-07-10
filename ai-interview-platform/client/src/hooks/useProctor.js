@@ -1,8 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useProctorOffline } from './useProctorOffline';
+import { TELEMETRY_EVENTS, PROCTOR_KEYS } from '../utils/telemetryConstants';
 
 export function useProctor({
-  interviewId = 'demo_session_active',
+  interviewId = PROCTOR_KEYS.DEMO_SESSION,
   enabled = false,
   onViolation,
   cheatWarningVisible,
@@ -38,10 +39,10 @@ export function useProctor({
     if (!enabled || cheatWarningVisible) return;
 
     const handleViolation = () => {
-      const eventType = document.hidden ? 'TabSwitch' : 'FullscreenExit';
+      const eventType = document.hidden ? TELEMETRY_EVENTS.TAB_SWITCH : TELEMETRY_EVENTS.FULLSCREEN_EXIT;
       const description = document.hidden
-        ? 'User switched to another tab'
-        : 'User exited fullscreen mode';
+        ? TELEMETRY_EVENTS.TAB_SWITCH_DESC
+        : TELEMETRY_EVENTS.FULLSCREEN_EXIT_DESC;
       reportTelemetry(eventType, description);
       if (onViolation) onViolation(eventType);
     };

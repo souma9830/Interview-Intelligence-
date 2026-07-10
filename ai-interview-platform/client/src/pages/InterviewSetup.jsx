@@ -36,6 +36,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   const [isStartingInterview, setIsStartingInterview] = useState(false);
   const [useCustomQuestions, setUseCustomQuestions] = useState(false);
   const [customQuestionsText, setCustomQuestionsText] = useState('');
+  const [resumeChecked, setResumeChecked] = useState(false);
 
   const roles = [
     { name: 'Frontend Engineer', icon: Code, desc: 'React, System Architecture, UI performance' },
@@ -45,24 +46,32 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   ];
 
   useEffect(() => {
-    const fetchExistingResume = async () => {
+    const verifyResumeStatus = async () => {
       const token = localStorage.getItem('camsense_token');
-      if (!token) return;
+      if (!token) { setResumeChecked(true); return; }
       try {
-        const response = await fetch('/api/resume/me', { headers: { Authorization: `Bearer ${token}` } });
-        const resJson = await response.json();
-        if (resJson.success && resJson.data) {
-          const profile = resJson.data;
-          setResumeUploaded(true);
-          setResumeName(profile.fileName || 'profile_resume.pdf');
-          setParsedProfile(profile);
-          calculateMatchingScore(profile.skills, jobDescription);
+        const [statusRes, resumeRes] = await Promise.all([
+          fetch('/api/resume/status', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/resume/me', { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+        const statusJson = await statusRes.json();
+        if (statusJson.success && statusJson.data?.hasResume) {
+          const resumeJson = await resumeRes.json();
+          if (resumeJson.success && resumeJson.data) {
+            const profile = resumeJson.data;
+            setResumeUploaded(true);
+            setResumeName(profile.fileName || 'profile_resume.pdf');
+            setParsedProfile(profile);
+            calculateMatchingScore(profile.skills, jobDescription);
+          }
         }
       } catch (err) {
         console.warn('Could not retrieve active resume data:', err);
+      } finally {
+        setResumeChecked(true);
       }
     };
-    fetchExistingResume();
+    verifyResumeStatus();
   }, []);
 
   const triggerJDAnalysis = async () => {

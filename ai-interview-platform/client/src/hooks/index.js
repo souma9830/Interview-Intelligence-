@@ -5,6 +5,7 @@ export { useKeyboardShortcuts, useShortcutsDialog } from './useKeyboardShortcuts
 export { useMediaDevices } from './useMediaDevices';
 export { useMediaQuery } from './useMediaQuery';
 export { useOnlineStatus } from './useOnlineStatus';
+export { useFormValidation, validators, createField } from './useFormValidation';
 export { useProctor } from './useProctor';
 export { useTheme } from './useTheme';
 export { useToast } from './useToast';
