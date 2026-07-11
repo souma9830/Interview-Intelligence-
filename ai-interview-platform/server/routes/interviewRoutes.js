@@ -19,6 +19,8 @@ const {
   followUpValidator,
 } = require('../middleware/validators/interviewValidators');
 
+// Code evaluation and execution routing with sandbox validation middleware
+// Set up memory storage parser for multer uploads
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }
