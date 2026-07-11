@@ -13,7 +13,7 @@ class ApiError extends Error {
   }
 }
 
-const notFoundHandler = (req, res, _next) => {
+const notFoundHandler = (req, res) => {
   return sendError(res, `Route not found: ${req.method} ${req.originalUrl}`, 404);
 };
 
@@ -21,21 +21,10 @@ const globalErrorHandler = (err, req, res, _next) => {
   let statusCode = err.statusCode || err.status || 500;
 
   if (err.name === 'MulterError') {
-    statusCode = 400;
     return sendError(res, `Upload error: ${err.message}`, 400);
   }
 
-  if (isServerError) {
-    ErrorTracker.capture(err, {
-      level: 'error',
-      path: req.originalUrl,
-      method: req.method,
-      userId: req.user?._id || req.user?.uid,
-      requestId: req.requestId,
-      ip: req.ip,
-      userAgent: req.get('user-agent'),
   if (err.name === 'ValidationError' && err.errors) {
-    statusCode = 400;
     const fields = Object.keys(err.errors).map(f => ({
       field: f,
       message: err.errors[f].message,
@@ -46,6 +35,20 @@ const globalErrorHandler = (err, req, res, _next) => {
       errors: fields,
       timestamp: new Date().toISOString(),
     });
+  }
+
+  if (err.name === 'CastError') {
+    return sendError(res, `Invalid ${err.path}: ${err.value}`, 400);
+  }
+
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue || {})[0] || 'field';
+    return sendError(res, `Duplicate value for ${field}`, 409);
+  }
+
+  const isServerError = statusCode >= 500;
+  const message = isServerError ? 'Internal Server Error' : (err.message || 'An error occurred');
+
   const logMeta = {
     requestId: req.requestId,
     userId: req.user ? req.user._id || req.user.uid : null,
@@ -55,24 +58,19 @@ const globalErrorHandler = (err, req, res, _next) => {
   };
 
   if (isServerError) {
+    ErrorTracker.capture(err, {
+      level: 'error',
+      path: req.originalUrl,
+      method: req.method,
+      userId: req.user?._id || req.user?.uid,
+      requestId: req.requestId,
+      ip: req.ip,
+      userAgent: req.get('user-agent'),
+    });
     logger.error(err.message, { ...logMeta, stack: err.stack });
   } else {
     logger.warn(err.message, logMeta);
   }
-
-  if (err.name === 'CastError') {
-    statusCode = 400;
-    return sendError(res, `Invalid ${err.path}: ${err.value}`, 400);
-  }
-
-  if (err.code === 11000) {
-    statusCode = 409;
-    const field = Object.keys(err.keyValue || {})[0] || 'field';
-    return sendError(res, `Duplicate value for ${field}`, 409);
-  }
-
-  const isServerError = statusCode >= 500;
-  const message = isServerError ? 'Internal Server Error' : (err.message || 'An error occurred');
 
   if (res.headersSent) {
     return;

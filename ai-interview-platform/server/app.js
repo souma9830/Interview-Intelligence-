@@ -83,10 +83,18 @@ app.post('/api/csp-violation', express.json({ type: 'application/csp-report' }),
   res.status(204).end();
 });
 
-// Register global error routing bounds
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
 
-module.exports = app;
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled Promise Rejection', { reason: reason.message || reason, stack: reason.stack });
+});
 
-// Unified error and security logging enabled
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception', { message: error.message, stack: error.stack });
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+});
+
+module.exports = app;

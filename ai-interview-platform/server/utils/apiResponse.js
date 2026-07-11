@@ -24,12 +24,18 @@ function sendCreated(res, data = null, message = 'Resource created successfully'
 }
 
 function sendError(res, message = 'Internal server error', statusCode = 500, errors = null) {
-  return res.status(statusCode).json({
+  const response = {
     success: false,
     message,
-    ...(errors ? { errors } : {}),
-    timestamp: new Date().toISOString()
-  });
+    timestamp: new Date().toISOString(),
+  };
+  if (errors) {
+    response.errors = errors;
+  }
+  if (res.req && res.req.requestId) {
+    response.requestId = res.req.requestId;
+  }
+  return res.status(statusCode).json(response);
 }
 
 function handleControllerError(res, error, defaultMessage = 'Internal server error') {
