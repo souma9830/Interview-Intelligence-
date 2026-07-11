@@ -14,6 +14,7 @@ const S = {
   tabBtn: (active) => ({ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', border: `1px solid ${active ? '#333' : 'transparent'}`, background: active ? '#1a1a1a' : 'transparent', color: active ? '#fff' : '#aaa', fontSize: '12px', fontWeight: active ? '500' : '400', cursor: 'pointer', transition: 'all 0.15s' }),
 };
 
+// Setup panel with background state configuration options and auto-saving drafts
 export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   const toast = useToast();
   const [role, setRole] = useState('Frontend Engineer');

@@ -6,6 +6,7 @@ import { LoadingOverlay } from '../components/Common/LoadingOverlay';
 import { MonacoEditorWrapper } from '../components/Common/MonacoEditorWrapper';
 import Modal from '../components/Common/Modal';
 
+// Coding assessment window integrated with live execution telemetry and auto-saving drafts
 const LANGUAGE_BOILERPLATES = {
   javascript: {
     ext: 'js',
