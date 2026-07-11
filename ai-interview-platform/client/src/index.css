@@ -11,6 +11,7 @@
   --color-secondary: #b0b0b0;
   --color-primary: #ffffff;
   --border-color: #1e1e1e;
+  --offline-accent: #ef4444;
 }
 
 [data-theme='light'] {
@@ -107,4 +108,21 @@ button { font-family: 'Inter', sans-serif; }
   background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s infinite;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #e2e2e2 !important;
+  transform: scale(1.01);
+}
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.99);
+}
+.btn-google:hover {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: #555 !important;
+}
+.btn-secondary:hover {
+  color: #fff !important;
+  border-color: #666 !important;
+  background: rgba(255,255,255,0.02) !important;
 }

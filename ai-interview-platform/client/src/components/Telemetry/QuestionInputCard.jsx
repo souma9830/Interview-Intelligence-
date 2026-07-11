@@ -1,27 +1,37 @@
 import React from 'react';
 
-export default function QuestionInputCard({ value, onChange, placeholder }) {
+export default function QuestionInputCard({ index, value, onChange, onRemove }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-      <textarea
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '12px',
+      background: '#111',
+      border: '1px solid #222',
+      borderRadius: '8px',
+      marginBottom: '10px'
+    }}>
+      <span style={{ fontSize: '13px', color: '#888', fontWeight: '500' }}>Q{index + 1}</span>
+      <input
+        type="text"
         value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={4}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Enter custom telemetry evaluation prompt..."
         style={{
-          width: '100%',
-          background: '#0d0d0d',
-          border: '1px solid #222',
-          borderRadius: '8px',
+          flex: 1,
+          background: 'transparent',
+          border: 'none',
           color: '#fff',
-          padding: '12px',
           fontSize: '13px',
-          fontFamily: 'Inter, sans-serif',
-          outline: 'none',
-          resize: 'vertical',
-          transition: 'all 0.15s'
+          outline: 'none'
         }}
       />
+      {onRemove && (
+        <button onClick={onRemove} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '13px' }}>
+          Remove
+        </button>
+      )}
     </div>
   );
 }

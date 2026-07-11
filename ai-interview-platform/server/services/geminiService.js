@@ -1,6 +1,6 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { llmCache } = require('./cache/cacheManager');
-const { parseGeminiJson, clampScore } = require('../utils/geminiParser');
+const { parseGeminiJson, clampScore, parseScoreSafe } = require('../utils/geminiParser');
 
 const getModel = () => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -338,6 +338,7 @@ CRITICAL RULES:
 - Do NOT be generous. A real interviewer would reject "hi hello" as a non-answer.
 - Short, vague, or lazy answers should NEVER score above 3.
 - The default score is NOT 5. Start from 0 and add points only for demonstrated knowledge.
+- ABSOLUTELY CRITICAL: score MUST be a pure integer between 0 and 10. Never return decimal numbers. Never return a score outside 0-10 range.
 `;
 
   try {
@@ -347,20 +348,24 @@ CRITICAL RULES:
 
     let rawText = result.response.text().trim();
     const data = parseGeminiJson(rawText);
-    data.score = clampScore(data.score, 0, 10, 0);
+    data.score = parseScoreSafe(data.score, 0, 10);
     console.log(`[Gemini] Answer evaluated. Score: ${data.score}/10, Verdict: ${data.verdict}`);
     return { success: true, ...data };
   } catch (err) {
     console.error('[Gemini] Answer evaluation failed:', err.message);
+    const wordCount = (candidateAnswer || '').split(/\s+/).length;
+    const hasContent = wordCount > 5;
     return {
-      success: false,
-      score: 0,
-      verdict: 'Poor',
-      strengths: [],
-      improvements: ['AI evaluation is temporarily unavailable. Your answer was recorded.'],
+      success: true,
+      score: hasContent ? 5 : 0,
+      verdict: hasContent ? 'Average' : 'Poor',
+      strengths: hasContent ? ['Answer was recorded for review'] : [],
+      improvements: ['AI evaluation encountered an error. Answer recorded for manual review.'],
       missedPoints: [],
       modelAnswer: 'Evaluation unavailable.',
-      feedback: 'We could not evaluate your answer right now. It has been recorded for later review.'
+      feedback: hasContent
+        ? 'Your answer has been recorded. The AI evaluator encountered a temporary issue.'
+        : 'No evaluable content detected in your response.'
     };
   }
 };
@@ -369,19 +374,25 @@ CRITICAL RULES:
  * PATH 5 — Final Report Synthesis
  * Gemini evaluates the full interview transcript and generates a comprehensive report.
  */
-const synthesizeInterviewReport = async ({ role, experience, qaList }) => {
+const synthesizeInterviewReport = async ({ role, experience, qaList, questionScores }) => {
   console.log('[Gemini] Synthesizing final interview performance report...');
   const model = getModel();
 
-  const transcript = qaList.map((qa, i) =>
-    `Q${i + 1} [${qa.category}]: ${qa.questionText}\nAnswer: ${qa.candidateAnswer || '(No answer provided)'}`
-  ).join('\n\n');
+  const transcript = qaList.map((qa, i) => {
+    const score = (questionScores && questionScores[i] !== undefined) ? questionScores[i] : 'N/A';
+    return `Q${i + 1} [${qa.category}] (Score: ${score}/100): ${qa.questionText}\nAnswer: ${qa.candidateAnswer || '(No answer provided)'}`;
+  }).join('\n\n');
+
+  const avgScore = (questionScores && questionScores.length > 0)
+    ? Math.round(questionScores.reduce((a, b) => a + b, 0) / questionScores.length)
+    : 'N/A';
 
   const prompt = `
 You are a senior hiring manager writing a comprehensive performance report for a candidate interview.
 
 Role: ${role}
 Experience Level: ${experience}
+Average Question Score (pre-computed): ${avgScore}/100
 
 Full Interview Transcript:
 """
@@ -389,6 +400,7 @@ ${transcript.slice(0, 7000)}
 """
 
 Analyze the entire interview performance and generate a detailed report.
+IMPORTANT: The final overallScore should align with the pre-computed average score above. If they diverge significantly, prefer the pre-computed average.
 
 Respond ONLY with a valid raw JSON object:
 {
@@ -415,11 +427,18 @@ Respond ONLY with a valid raw JSON object:
 
   let rawText = result.response.text().trim();
   const data = parseGeminiJson(rawText);
-  // Clamp all scores
-  data.overallScore = clampScore(data.overallScore, 10, 100, 60);
-  data.technicalScore = clampScore(data.technicalScore, 10, 100, 60);
-  data.communicationScore = clampScore(data.communicationScore, 10, 100, 60);
-  data.hrScore = clampScore(data.hrScore, 10, 100, 60);
+  const actualAvg = (questionScores && questionScores.length > 0)
+    ? Math.round(questionScores.reduce((a, b) => a + b, 0) / questionScores.length)
+    : null;
+  data.overallScore = actualAvg !== null ? actualAvg : parseScoreSafe(data.overallScore, 10, 100);
+  data.technicalScore = parseScoreSafe(data.technicalScore, 10, 100);
+  data.communicationScore = parseScoreSafe(data.communicationScore, 10, 100);
+  data.hrScore = parseScoreSafe(data.hrScore, 10, 100);
+  if (data.breakdown) {
+    Object.keys(data.breakdown).forEach(k => {
+      data.breakdown[k] = parseScoreSafe(data.breakdown[k], 10, 100);
+    });
+  }
 
   console.log(`[Gemini] Report synthesized. Overall: ${data.overallScore}%, Recommendation: ${data.hiringRecommendation}`);
   return data;

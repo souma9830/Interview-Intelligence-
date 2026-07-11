@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Sparkles, Code, Compass, AlertCircle, GraduationCap, FileText } from 'lucide-react';
 import { useMediaDevices } from '../hooks/useMediaDevices';
+// QuestionInputCard provides custom telemetry inputs for question setup
 import QuestionInputCard from '../components/Telemetry/QuestionInputCard';
 import { sanitizeForDisplay } from '../utils/security';
 import { useToast } from '../components/Common/ToastProvider';
@@ -14,6 +15,7 @@ const S = {
   tabBtn: (active) => ({ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', border: `1px solid ${active ? '#333' : 'transparent'}`, background: active ? '#1a1a1a' : 'transparent', color: active ? '#fff' : '#aaa', fontSize: '12px', fontWeight: active ? '500' : '400', cursor: 'pointer', transition: 'all 0.15s' }),
 };
 
+// Setup panel with background state configuration options and auto-saving drafts
 export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   const toast = useToast();
   const [role, setRole] = useState('Frontend Engineer');
@@ -36,6 +38,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   const [isStartingInterview, setIsStartingInterview] = useState(false);
   const [useCustomQuestions, setUseCustomQuestions] = useState(false);
   const [customQuestionsText, setCustomQuestionsText] = useState('');
+  const [resumeChecked, setResumeChecked] = useState(false);
 
   const roles = [
     { name: 'Frontend Engineer', icon: Code, desc: 'React, System Architecture, UI performance' },
@@ -45,24 +48,32 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   ];
 
   useEffect(() => {
-    const fetchExistingResume = async () => {
+    const verifyResumeStatus = async () => {
       const token = localStorage.getItem('camsense_token');
-      if (!token) return;
+      if (!token) { setResumeChecked(true); return; }
       try {
-        const response = await fetch('/api/resume/me', { headers: { Authorization: `Bearer ${token}` } });
-        const resJson = await response.json();
-        if (resJson.success && resJson.data) {
-          const profile = resJson.data;
-          setResumeUploaded(true);
-          setResumeName(profile.fileName || 'profile_resume.pdf');
-          setParsedProfile(profile);
-          calculateMatchingScore(profile.skills, jobDescription);
+        const [statusRes, resumeRes] = await Promise.all([
+          fetch('/api/resume/status', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/resume/me', { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+        const statusJson = await statusRes.json();
+        if (statusJson.success && statusJson.data?.hasResume) {
+          const resumeJson = await resumeRes.json();
+          if (resumeJson.success && resumeJson.data) {
+            const profile = resumeJson.data;
+            setResumeUploaded(true);
+            setResumeName(profile.fileName || 'profile_resume.pdf');
+            setParsedProfile(profile);
+            calculateMatchingScore(profile.skills, jobDescription);
+          }
         }
       } catch (err) {
         console.warn('Could not retrieve active resume data:', err);
+      } finally {
+        setResumeChecked(true);
       }
     };
-    fetchExistingResume();
+    verifyResumeStatus();
   }, []);
 
   const triggerJDAnalysis = async () => {

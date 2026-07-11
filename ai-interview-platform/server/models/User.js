@@ -11,6 +11,8 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please provide an email'],
     unique: true,
+    lowercase: true,
+    trim: true,
     match: [
       /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
       'Please provide a valid email address',
@@ -20,7 +22,13 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add a password'],
     minlength: 6,
-    select: false, // Prevents returning password by default in queries
+    select: false,
+  },
+  firebaseUid: {
+    type: String,
+    sparse: true,
+    unique: true,
+    default: null,
   },
   createdAt: {
     type: Date,

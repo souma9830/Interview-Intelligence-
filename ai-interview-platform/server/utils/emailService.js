@@ -1,23 +1,34 @@
 const nodemailer = require('nodemailer');
 
-const sendEmail = async (options) => {
-  // Create a transporter
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.mailtrap.io',
-    port: process.env.SMTP_PORT || 2525,
+const createTransporter = () => {
+  const smtpHost = process.env.SMTP_HOST || 'smtp.mailtrap.io';
+  const smtpPort = parseInt(process.env.SMTP_PORT, 10) || 2525;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+
+  if (!smtpUser || !smtpPass) {
+    console.warn('[SMTP] Missing SMTP credentials. Emails will not be delivered.');
+  }
+
+  return nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: smtpUser,
+      pass: smtpPass,
     },
   });
+};
 
-  const htmlTemplate = `
+const buildHtmlTemplate = (options) => {
+  const otpMatch = options.message ? options.message.match(/\d{6}/) : null;
+  return `
     <!DOCTYPE html>
     <html>
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${options.subject}</title>
+        <title>${options.subject || ''}</title>
         <style>
           body { font-family: 'Inter', Helvetica, Arial, sans-serif; background-color: #f6f9fc; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
           .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
@@ -34,11 +45,11 @@ const sendEmail = async (options) => {
             <h1>CamSense AI</h1>
           </div>
           <div class="content">
-            <h2 style="margin-top: 0; font-size: 18px; font-weight: 600; color: #111111;">${options.subject}</h2>
-            <p>${options.message}</p>
-            ${options.message.includes('OTP') || options.message.includes('code') ? `
+            <h2 style="margin-top: 0; font-size: 18px; font-weight: 600; color: #111111;">${options.subject || ''}</h2>
+            <p>${options.message || ''}</p>
+            ${otpMatch ? `
               <div class="otp-code">
-                ${(options.message.match(/\d{6}/) || [''])[0]}
+                ${otpMatch[0]}
               </div>
             ` : ''}
           </div>
@@ -50,19 +61,34 @@ const sendEmail = async (options) => {
       </body>
     </html>
   `;
+};
 
-  // Define email options
+const sendEmail = async (options) => {
+  const transporter = createTransporter();
+  const recipientEmail = options.email || options.to;
+
+  if (!recipientEmail) {
+    throw new Error('Recipient email address is required');
+  }
+
   const mailOptions = {
     from: `${process.env.FROM_NAME || 'Interview Intelligence'} <${process.env.FROM_EMAIL || 'no-reply@interview-intelligence.com'}>`,
-    to: options.email,
-    subject: options.subject,
-    text: options.message,
-    html: htmlTemplate,
+    to: recipientEmail,
+    subject: options.subject || 'No Subject',
+    text: options.message || '',
+    html: buildHtmlTemplate(options),
   };
 
-  // Send email
-  console.log(`[SMTP Transporter] Attempting delivery to: ${options.email}`);
-  await transporter.sendMail(mailOptions);
+  console.log(`[SMTP] Attempting delivery to: ${recipientEmail}`);
+  
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[SMTP] Message sent successfully: ${info.messageId}`);
+    return info;
+  } catch (err) {
+    console.error(`[SMTP] Delivery failed: ${err.message}`);
+    throw new Error(`Email delivery failed: ${err.message}`);
+  }
 };
 
 module.exports = sendEmail;

@@ -9,13 +9,15 @@ const scheduleRoutes = require('./routes/scheduleRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const requestLogger = require('./middleware/logging/requestLogger');
+const { apiVersioning } = require('./middleware/apiVersion');
 
 const { globalErrorHandler, notFoundHandler } = require('./middleware/error/errorHandler');
 const configCheck = require('./utils/configCheck');
+const logger = require('./services/logger');
 
 const configStatus = configCheck.check();
 if (!configStatus.valid) {
-  console.warn(`[Configuration Warning] Missing environment variables: ${configStatus.missing.join(', ')}`);
+  logger.warn('Missing environment variables', { missing: configStatus.missing });
 }
 
 const rateLimiter = require('./middleware/rateLimiter');
@@ -23,7 +25,7 @@ const rateLimiter = require('./middleware/rateLimiter');
 const app = express();
 
 if (!process.env.JWT_SECRET) {
-  console.warn('[Security Warning] JWT_SECRET environment variable is missing. Using default signing key.');
+  logger.warn('JWT_SECRET environment variable is missing. Using default signing key.');
 }
 
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
@@ -35,7 +37,7 @@ const corsOptions = {
     if (!origin || ALLOWED_ORIGINS.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.warn(`[CORS] Blocked request from origin: ${origin}`);
+      logger.warn('Blocked request from origin', { origin });
       callback(null, false);
     }
   },
@@ -48,11 +50,14 @@ const corsOptions = {
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(requestLogger);
+app.use(apiVersioning);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(rateLimiter(100));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v2/auth', require('./routes/v2/authRoutes'));
 app.use('/api', require('./routes/telemetryRoutes'));
 app.use('/api', require('./routes/backupRoutes'));
 app.use('/api/interview', interviewRoutes);
