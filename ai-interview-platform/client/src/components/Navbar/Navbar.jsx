@@ -1,6 +1,6 @@
 import React from 'react';
 import { Activity, WifiOff } from 'lucide-react';
-import ThemeToggler from '../Common/ThemeToggler';
+import ThemeToggle from '../Common/ThemeToggle';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 
@@ -17,7 +17,7 @@ export default function Navbar() {
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <ThemeToggler />
+        <ThemeToggle variant="icon-only" />
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: isOnline ? '#4ade80' : '#ef4444', display: 'inline-block' }} />
           {!isMobile && <span style={{ fontSize: '11px', color: 'var(--color-secondary)' }}>localhost:5000</span>}

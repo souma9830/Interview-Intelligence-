@@ -1,17 +1,28 @@
 import React from 'react';
 import { Sun, Moon } from 'lucide-react';
+import { useDarkMode } from '../../hooks/useDarkMode';
+import { fullButton, iconButton } from './ThemeToggle.styles';
 
-export default function ThemeToggle({ theme, onToggle }) {
+export default function ThemeToggle({ variant = 'full' }) {
+  const [theme, toggleTheme] = useDarkMode();
+
+  if (variant === 'icon-only') {
+    return (
+      <button
+        onClick={toggleTheme}
+        style={iconButton}
+        aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      >
+        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+      </button>
+    );
+  }
+
   return (
     <button
-      onClick={onToggle}
+      onClick={toggleTheme}
+      style={fullButton}
       aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-      style={{
-        width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-        padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--border-color)',
-        background: 'transparent', color: 'var(--color-secondary)', fontSize: '13px',
-        cursor: 'pointer', transition: 'all 0.15s',
-      }}
     >
       {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
       <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>

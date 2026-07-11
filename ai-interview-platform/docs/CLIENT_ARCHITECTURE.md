@@ -39,8 +39,8 @@ client/src/
       RadialProgress.jsx     # Circular progress indicator
       ReportExportModal.jsx  # PDF report export dialog
       Skeleton.jsx           # Loading skeleton components
-      ThemeToggle.jsx        # Dark/light mode toggle
-      ThemeToggler.jsx       # Alternate theme toggle
+      ThemeToggle.jsx        # Dark/light mode toggle (supports icon-only and full variants)
+      ThemeToggle.styles.js  # Extracted theme toggle styles
       Toast.jsx              # Toast notification container
       ToastProvider.jsx      # Toast context provider
       index.js               # Barrel exports
