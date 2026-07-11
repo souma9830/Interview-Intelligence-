@@ -2,12 +2,11 @@ const mongoose = require('mongoose');
 const logger = require('../services/logger');
 const queryProfiler = require('../services/queryProfiler');
 const { ensureIndexes } = require('./indexManager');
+const { DB_URI, connectionOptions, MAX_RETRIES, RETRY_DELAY_MS, wait } = require('../config/databaseConfig');
 
 let isConnected = false;
 
-const DB_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
-
-const connectDatabase = async () => {
+const connectDatabase = async (retryCount = 0) => {
   if (isConnected) {
     return;
   }
@@ -20,17 +19,14 @@ const connectDatabase = async () => {
   try {
     mongoose.set('strictQuery', true);
 
-    const conn = await mongoose.connect(DB_URI, {
-      serverSelectionTimeoutMS: 5000,
-      heartbeatFrequencyMS: 10000,
-    });
+    const conn = await mongoose.connect(DB_URI, connectionOptions);
 
     isConnected = true;
     logger.info(`MongoDB connected: ${conn.connection.host}`);
 
     const { runMigrations } = require('../db/migrations/migrationRunner');
     runMigrations().catch(err => {
-      console.error('[Database] Migration error:', err.message);
+      logger.error('Migration error', { error: err.message });
     });
 
     mongoose.connection.on('error', (err) => {
@@ -58,8 +54,14 @@ const connectDatabase = async () => {
     }
 
   } catch (err) {
-    logger.error('Could not connect to MongoDB', { error: err.message });
+    logger.error('Could not connect to MongoDB', { error: err.message, attempt: retryCount + 1 });
     isConnected = false;
+
+    if (retryCount < MAX_RETRIES - 1) {
+      logger.info(`Retrying connection in ${RETRY_DELAY_MS / 1000}s... (attempt ${retryCount + 2}/${MAX_RETRIES})`);
+      await wait(RETRY_DELAY_MS);
+      return connectDatabase(retryCount + 1);
+    }
   }
 };
 

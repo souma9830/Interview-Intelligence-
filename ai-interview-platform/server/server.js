@@ -26,12 +26,12 @@ const startServer = async () => {
         auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
       });
       await testTransporter.verify();
-      console.log('[SMTP] Connection verified successfully.');
+      logger.info('SMTP connection verified successfully.');
     } catch (err) {
-      console.warn(`[SMTP] Connection verification failed: ${err.message}. Emails may not be delivered.`);
+      logger.warn('SMTP connection verification failed. Emails may not be delivered.', { error: err.message });
     }
   } else {
-    console.warn('[SMTP] Not configured. Email functionality disabled.');
+    logger.warn('SMTP not configured. Email functionality disabled.');
   }
 
   const app = require('./app');
