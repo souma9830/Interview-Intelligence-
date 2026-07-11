@@ -1,4 +1,5 @@
 export { useAbortableEffect } from './useAbortableEffect';
+export { useTabValidation } from './useTabValidation';
 export { useFetch, wrapFetch } from './useFetch';
 export { useFocusTrap } from './useFocusTrap';
 export { useKeyboardShortcuts, useShortcutsDialog } from './useKeyboardShortcuts';

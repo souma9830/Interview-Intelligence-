@@ -1,9 +1,9 @@
 import React, { useRef, useCallback, useEffect } from 'react';
-import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarChart2, Sun, Moon, Menu, X } from 'lucide-react';
+import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarChart2, Sun, Moon, Menu, X, Calendar } from 'lucide-react';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useTheme } from '../../hooks/useTheme';
+import { TABS } from '../../constants/tabs';
 
-// Sidebar navigation containing shortcuts helper options
 const S = {
   aside: { width: '240px', background: 'var(--bg-card)', borderRight: '1px solid var(--border-color)', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '24px 16px', flexShrink: 0, transition: 'background 0.3s, border-color 0.3s' },
   logo: { display: 'flex', alignItems: 'center', gap: '10px', padding: '0 8px 20px', marginBottom: '8px', borderBottom: '1px solid var(--border-color)' },
@@ -69,13 +69,13 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
   const isCodingDone = !!globalState.finalCode;
 
   const items = [
-    { id: 'home', label: 'Home', icon: HomeIcon, disabled: false },
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart2, disabled: false },
-    { id: 'schedule', label: 'Schedule', icon: Calendar, disabled: false },
-    { id: 'setup', label: 'Interview Setup', icon: Settings, disabled: false },
-    { id: 'session', label: 'AI Mock Session', icon: Mic, disabled: !isSetupDone },
-    { id: 'coding', label: 'Coding Test', icon: Code2, disabled: !isSessionDone },
-    { id: 'result', label: 'Results', icon: Award, disabled: !isCodingDone },
+    { id: TABS.HOME, label: 'Home', icon: HomeIcon, disabled: false },
+    { id: TABS.DASHBOARD, label: 'Dashboard', icon: BarChart2, disabled: false },
+    { id: TABS.SCHEDULE, label: 'Schedule', icon: Calendar, disabled: false },
+    { id: TABS.SETUP, label: 'Interview Setup', icon: Settings, disabled: false },
+    { id: TABS.SESSION, label: 'AI Mock Session', icon: Mic, disabled: !isSetupDone },
+    { id: TABS.CODING, label: 'Coding Test', icon: Code2, disabled: !isSessionDone },
+    { id: TABS.RESULT, label: 'Results', icon: Award, disabled: !isCodingDone },
   ];
 
   const name = user?.name || 'Candidate';
