@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Offline - CamSense AI</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: 'Inter', -apple-system, sans-serif;
+        background: #0b0f19;
+        color: #e0e0e0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        text-align: center;
+        padding: 20px;
+      }
+      .container { max-width: 400px; }
+      .icon { font-size: 48px; margin-bottom: 16px; }
+      h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; color: #fff; }
+      p { font-size: 14px; color: #888; line-height: 1.6; }
+      .btn {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 24px;
+        background: #fff;
+        color: #000;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .btn:hover { background: #e2e2e2; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="icon">📡</div>
+      <h1>You're offline</h1>
+      <p>CamSense AI needs an internet connection for AI-powered interviews and assessments. Please check your connection and try again.</p>
+      <button class="btn" onclick="window.location.reload()">Retry</button>
+    </div>
+  </body>
+</html>

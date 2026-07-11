@@ -1,4 +1,5 @@
 const { sendError } = require('../../utils/apiResponse');
+const ErrorTracker = require('../../services/errorTracker');
 const logger = require('../../services/logger');
 
 class ApiError extends Error {
@@ -24,6 +25,15 @@ const globalErrorHandler = (err, req, res, _next) => {
     return sendError(res, `Upload error: ${err.message}`, 400);
   }
 
+  if (isServerError) {
+    ErrorTracker.capture(err, {
+      level: 'error',
+      path: req.originalUrl,
+      method: req.method,
+      userId: req.user?._id || req.user?.uid,
+      requestId: req.requestId,
+      ip: req.ip,
+      userAgent: req.get('user-agent'),
   if (err.name === 'ValidationError' && err.errors) {
     statusCode = 400;
     const fields = Object.keys(err.errors).map(f => ({
