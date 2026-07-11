@@ -1,38 +1,8 @@
-const crypto = require('crypto');
-
-const SELF = "'self'";
-const NONE = "'none'";
-
-const CSP_DIRECTIVES = {
-  defaultSrc: [SELF],
-  scriptSrc: [SELF, "'unsafe-inline'", "'unsafe-eval'", 'https://apis.google.com', 'https://www.gstatic.com'],
-  styleSrc: [SELF, "'unsafe-inline'", 'https://fonts.googleapis.com'],
-  imgSrc: [SELF, 'data:', 'blob:'],
-  fontSrc: [SELF, 'https://fonts.gstatic.com', 'data:'],
-  connectSrc: [SELF, 'https://identitytoolkit.googleapis.com', 'https://securetoken.googleapis.com', 'https://www.googleapis.com'],
-  frameSrc: ['https://accounts.google.com'],
-  objectSrc: [NONE],
-  mediaSrc: [SELF, 'blob:'],
-  workerSrc: [SELF, 'blob:'],
-  formAction: [SELF],
-  baseUri: [SELF],
-  upgradeInsecureRequests: true,
-};
-
-function buildCSPString(directives) {
-  return Object.entries(directives)
-    .map(([key, value]) => {
-      const headerName = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-      const values = Array.isArray(value) ? value.join(' ') : value;
-      return `${headerName} ${values}`;
-    })
-    .join('; ');
-}
-
-const getCSPNonce = () => crypto.randomBytes(16).toString('base64');
+const { CSP_DIRECTIVES, buildCSPString, generateNonce } = require('../config/securityConfig');
+const logger = require('../services/logger');
 
 const securityHeaders = (req, res, next) => {
-  const nonce = getCSPNonce();
+  const nonce = generateNonce();
   res.locals.cspNonce = nonce;
 
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -56,4 +26,4 @@ const securityHeaders = (req, res, next) => {
   next();
 };
 
-module.exports = { securityHeaders, buildCSPString, CSP_DIRECTIVES };
+module.exports = { securityHeaders };
