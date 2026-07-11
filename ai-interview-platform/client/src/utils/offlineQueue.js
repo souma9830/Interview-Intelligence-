@@ -5,10 +5,10 @@ export const queueOfflineRequest = (requestData) => {
     const queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
     queue.push({
       ...requestData,
-      timestamp: Date.now()
+      queuedAt: Date.now(),
+      retryCount: 0,
     });
     localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-    console.log('[Offline Queue] Request added:', requestData.url);
   } catch (error) {
     console.error('[Offline Queue] Failed to queue request:', error.message);
   }
@@ -16,15 +16,38 @@ export const queueOfflineRequest = (requestData) => {
 
 export const syncOfflineRequests = async () => {
   if (!navigator.onLine) return;
+  let queue;
   try {
-    const queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
-    if (queue.length === 0) return;
-    
-    console.log('[Offline Queue] Starting sync of', queue.length, 'requests...');
-    // Real implementation would loop and retry fetch, here we simulate and clean
+    queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+  } catch {
+    return;
+  }
+  if (queue.length === 0) return;
+
+  const retained = [];
+  for (const entry of queue) {
+    try {
+      const options = {
+        method: entry.method || 'POST',
+        headers: entry.headers || { 'Content-Type': 'application/json' },
+      };
+      if (entry.body) {
+        options.body = entry.body;
+      }
+      const response = await fetch(entry.url, options);
+      if (!response.ok) {
+        retained.push({ ...entry, retryCount: entry.retryCount + 1 });
+      }
+    } catch {
+      if (entry.retryCount < 3) {
+        retained.push({ ...entry, retryCount: entry.retryCount + 1 });
+      }
+    }
+  }
+
+  if (retained.length > 0) {
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(retained));
+  } else {
     localStorage.removeItem(QUEUE_KEY);
-    console.log('[Offline Queue] Sync completed successfully.');
-  } catch (error) {
-    console.error('[Offline Queue] Sync failed:', error.message);
   }
 };
