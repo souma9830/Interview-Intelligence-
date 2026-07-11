@@ -88,6 +88,24 @@ refactor(hooks): extract useFetch from useApi
 
 ## Code Style
 
+### ESLint
+
+This project uses ESLint to enforce code quality. Configuration files are at:
+- **Server**: `.eslintrc.json` (root, CommonJS environment)
+- **Client**: `client/.eslintrc.cjs` (browser/JSX environment)
+
+Run linting before committing:
+```bash
+# Server-side lint
+npm run lint
+
+# Client-side lint
+npm run lint:client
+
+# Both
+npm run lint:all
+```
+
 ### JavaScript/JSX
 
 - Use ES6+ features
@@ -102,6 +120,7 @@ refactor(hooks): extract useFetch from useApi
 - Keep components small and focused
 - Extract reusable logic into custom hooks
 - Use meaningful prop and variable names
+- Follow the Rules of Hooks (enforced by eslint-plugin-react-hooks)
 
 ### CSS
 
