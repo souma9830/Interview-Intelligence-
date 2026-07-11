@@ -19,38 +19,40 @@ This document describes the server-side architecture of the Interview Intelligen
 
 ```
 server/
-  index.js                   # Server entry point
-  env.js                     # Environment validation
-  package.json               # Dependencies
+  server.js                  # Entry point: Firebase init, DB connect, graceful shutdown
+  app.js                     # Express app: middleware chain, route mounting, error handlers
+  package.json               # Dependencies and scripts
 
   config/
-    gemini.js                # Gemini AI configuration
-    firebaseAdmin.js         # Firebase service account setup
+    databaseConfig.js        # MongoDB connection pooling and retry options
+    sandboxConfig.js         # Code sandbox execution limits
+    securityConfig.js        # CSP directives, CORS origins, nonce generation
 
   controllers/
-    adminController.js       # Admin analytics
-    authController.js        # Login, signup, OTP verification
-    codingTestController.js  # Code execution and testing
-    codingTestHistoryController.js  # Coding test history
-    healthController.js      # Server health check
-    interviewController.js   # Interview lifecycle management
-    interviewFeedbackController.js  # User feedback submission
-    proctoringController.js  # Violation logging
-    reportController.js      # Performance report generation
-    resumeController.js      # Resume upload (local + S3)
-    telemetryController.js   # Interview telemetry data
-    testHistoryController.js # Interview history queries
-    userController.js        # User profile CRUD
+    adminController.js       # Admin analytics and user management
+    authController.js        # Login, signup, OTP, Firebase sync
+    errorController.js       # Error log querying and aggregation
+    healthController.js      # System health check endpoint
+    interviewController.js   # Question generation, answer evaluation
+    questionController.js    # Custom question set management
+    reportController.js      # Performance report synthesis
+    resumeController.js      # Resume upload and parsing
+    scheduleController.js    # Interview scheduling CRUD
 
   middleware/
     authMiddleware.js        # Firebase JWT verification
-    errorHandler.js          # Global error handler
-    responseStandardizer.js  # Standardized API responses
-    cors.js                  # CORS configuration
-    requestLogger.js         # Request logging
-    validateApiKey.js        # X-API-KEY header validation
-    securityAudit.js         # Security audit logging
-    sensitiveRateLimiter.js  # Rate limiting for admin endpoints
+    error/errorHandler.js    # Global error handler with ErrorTracker integration
+    logging/requestLogger.js # Structured request logging
+    rateLimiter.js           # In-memory rate limiter per IP+window
+    sensitiveRateLimiter.js  # Stricter rate limiting for admin/auth routes
+    securityHeaders.js       # CSP, HSTS, X-Frame-Options, Permissions-Policy
+    securityAudit.js         # Security event audit logging
+    sanitizeMiddleware.js    # NoSQL injection prevention
+    apiVersion.js            # API version header handling
+    cacheMiddleware.js       # Response caching layer
+    interviewGuard.js        # Interview session preconditions
+    scheduleGuard.js         # Schedule preconditions
+    validators/              # express-validator schemas for request validation
 
   models/
     CodingTestHistory.js     # Coding test results
