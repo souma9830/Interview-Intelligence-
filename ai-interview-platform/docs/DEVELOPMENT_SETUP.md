@@ -20,13 +20,13 @@ cd Interview-Intelligence-
 ### 2. Install Dependencies
 
 ```bash
-# Server
-cd ai-interview-platform/server
+# Root (installs server + triggers client postinstall)
+cd ai-interview-platform
 npm install
 
-# Client (separate terminal)
-cd ai-interview-platform/client
-npm install
+# Or manually:
+cd ai-interview-platform/server && npm install
+cd ai-interview-platform/client && npm install
 ```
 
 ### 3. Environment Configuration
@@ -163,10 +163,23 @@ refactor(services): consolidate API calls
 docs(readme): update setup instructions
 ```
 
+## Additional Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CSP_REPORT_URI` | (empty) | Endpoint for CSP violation reports |
+| `DB_POOL_SIZE` | `10` | MongoDB connection pool max size |
+| `DB_MIN_POOL_SIZE` | `2` | MongoDB connection pool min size |
+| `DB_SOCKET_TIMEOUT` | `45000` | MongoDB socket timeout in ms |
+| `LOG_LEVEL` | `info` | Winston log level (debug, info, warn, error) |
+
 ## Testing
 
 ### Running Tests
 ```bash
+# Root (all tests)
+npm test
+
 # Client
 cd client && npm test
 

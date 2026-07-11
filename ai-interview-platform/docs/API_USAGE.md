@@ -13,21 +13,19 @@ Every API response follows this shape:
   "success": true,
   "message": "Operation completed successfully.",
   "data": {},
-  "_meta": {
-    "timestamp": "2026-07-09T12:00:00.000Z",
-    "requestId": "req_abc123"
-  }
+  "timestamp": "2026-07-09T12:00:00.000Z"
 }
 ```
 
-Error responses:
+For authenticated endpoints, errors may include a `requestId` for traceability:
 
 ```json
 {
   "success": false,
   "message": "Descriptive error message.",
-  "error": {},
-  "_meta": { "timestamp": "...", "requestId": "..." }
+  "errors": {},
+  "requestId": "req_abc123",
+  "timestamp": "2026-07-09T12:00:00.000Z"
 }
 ```
 
@@ -369,6 +367,51 @@ Authorization: Bearer <token>
 
 Requires admin privileges.
 
+### Error Monitoring Dashboard
+
+```
+GET /api/admin/errors
+Authorization: Bearer <token>
+```
+
+Returns aggregated error logs with pagination.
+
+### Query Performance Metrics
+
+```
+GET /api/admin/queries
+Authorization: Bearer <token>
+```
+
+Returns slow query profiling data from the query profiler.
+
+### System Health
+
+```
+GET /api/health
+```
+
+Public endpoint returning server status, uptime, memory usage, and MongoDB connection state.
+
+### Telemetry Dashboard
+
+```
+GET /api/telemetry
+```
+
+Returns aggregated telemetry events (tab switches, focus loss, violations) per interview session.
+
+### API Versioning
+
+All endpoints are available under versioned prefixes:
+
+| Prefix | Status |
+|--------|--------|
+| `/api/auth` | Current (aliased to v1) |
+| `/api/v1/auth` | Stable |
+| `/api/v2/auth` | Preview (limited routes) |
+
+Use `Accept-Version` header or explicit `/api/v1/` prefix for stable contracts.
 
 ## Error Codes
 
