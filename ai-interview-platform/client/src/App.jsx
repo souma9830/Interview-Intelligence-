@@ -144,3 +144,5 @@ export default function App() {
     </ToastProvider>
   );
 }
+
+// TODO: Issue 239 Performance analytics
