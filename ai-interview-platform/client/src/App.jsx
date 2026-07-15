@@ -144,3 +144,5 @@ export default function App() {
     </ToastProvider>
   );
 }
+
+// TODO: Issue 246 Accessibility improvements
