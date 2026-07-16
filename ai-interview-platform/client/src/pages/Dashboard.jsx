@@ -178,11 +178,28 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
     <div style={{ maxWidth: '960px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
 
       
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fff', letterSpacing: '-0.02em', margin: '0 0 6px' }}>Performance Dashboard</h1>
-        <p style={{ fontSize: '14px', color: '#aaa', lineHeight: '1.6' }}>
-          Monitor your assessment attempts, skill improvements, and hiring readiness reports.
-        </p>
+      <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h1 style={{
+            fontSize: '28px', fontWeight: '700', letterSpacing: '-0.02em', margin: '0 0 6px',
+            background: 'linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+          }}>Performance Dashboard</h1>
+          <p style={{ fontSize: '14px', color: '#aaa', lineHeight: '1.6', margin: 0 }}>
+            Monitor your assessment attempts, skill improvements, and hiring readiness reports.
+          </p>
+        </div>
+        {schedules.some(s => getScheduleStatus(s).canStart) && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px',
+            background: 'rgba(74, 222, 128, 0.08)', border: '1px solid rgba(74, 222, 128, 0.3)',
+            borderRadius: '20px', fontSize: '12px', fontWeight: '600', color: '#4ade80',
+            animation: 'pulse 2s ease-in-out infinite',
+          }}>
+            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} />
+            Live Session Ready
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
