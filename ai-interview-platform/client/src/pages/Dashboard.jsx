@@ -142,9 +142,16 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
     const now = Date.now();
     const scheduledAt = new Date(schedule.scheduledAt).getTime();
     const endAt = scheduledAt + (schedule.durationMinutes || 45) * 60 * 1000;
-    if (now > endAt) return { label: 'Completed', color: '#555' };
-    if (now >= scheduledAt) return { label: 'Active', color: '#4ade80' };
-    return { label: 'Upcoming', color: '#facc15' };
+    // Allow joining up to 5 minutes before the scheduled time
+    const joinWindowMs = 5 * 60 * 1000;
+    if (now > endAt) return { label: 'Completed', color: '#555', canStart: false };
+    if (now >= scheduledAt - joinWindowMs) return { label: 'Active', color: '#4ade80', canStart: true };
+    // Calculate human-readable time remaining
+    const msLeft = scheduledAt - now;
+    const minsLeft = Math.ceil(msLeft / 60000);
+    const hoursLeft = Math.floor(minsLeft / 60);
+    const countdown = hoursLeft > 0 ? `${hoursLeft}h ${minsLeft % 60}m` : `${minsLeft}m`;
+    return { label: 'Upcoming', color: '#facc15', canStart: false, countdown };
   };
 
   if (loading) {
