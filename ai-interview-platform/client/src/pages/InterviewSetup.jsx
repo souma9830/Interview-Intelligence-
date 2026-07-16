@@ -194,7 +194,10 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
 
   const handleStartInterview = async () => {
     if (!resumeUploaded) {
-      setErrorMessage('Please upload your resume before starting the interview session.');
+      setErrorMessage('⚠️ Resume required: Please upload your resume before starting the interview. The AI needs your profile to generate relevant questions.');
+      toast.show('Upload your resume first to proceed.', 'error');
+      // Scroll to the upload section so user knows what to do
+      document.querySelector('[aria-label="Upload resume file in PDF or DOCX format"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     setIsStartingInterview(true);
