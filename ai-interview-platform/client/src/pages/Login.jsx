@@ -274,7 +274,13 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
               <label htmlFor="login-password" style={label}>Password</label>
-              <button type="button" onClick={() => setCurrentTab('forgot-password')} style={toggleLink}>
+              <button
+                id="forgot-password-link"
+                type="button"
+                aria-label="Forgot password? Reset via OTP"
+                onClick={() => setCurrentTab('forgot-password')}
+                style={toggleLink}
+              >
                 Forgot password?
               </button>
             </div>
