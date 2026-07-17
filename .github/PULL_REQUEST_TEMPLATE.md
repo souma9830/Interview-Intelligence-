@@ -1,36 +1,58 @@
-# 📋 Pull Request Template
+---
+name: Pull Request
+about: Submit changes to Interview Intelligence
+title: ''
+labels: ''
+assignees: ''
+---
 
-## 🛠️ Related Issue
-Closes #
+## 📋 Pull Request
+
+### Related Issue
+Closes #ISSUE_NUMBER
 
 ### Program Compliance Checklist
 - [ ] This PR corresponds to a unique, non-duplicate issue in **ELUSoC 2026**
 - [ ] I have verified branch isolation rules (no unrelated files modified)
 
-## 📝 Description
-Provide a concise description of the changes introduced by this pull request. Explain the problem being solved and the architectural/design decisions made.
+---
+
+## 📝 Summary
+A concise description of the changes introduced by this pull request. Explain the problem being solved and any design decisions made.
 
 ## 🚀 Changes Made
-- [ ] Added/modified frontend components
-- [ ] Created/updated backend endpoints
-- [ ] Implemented database migrations/schema updates
-- [ ] Fixed specific bugs/security vulnerability
-- [ ] Updated documentation/developer guides
+- [ ] Bug fix (non-breaking change)
+- [ ] New feature (non-breaking change)
+- [ ] Security improvement
+- [ ] Performance optimization
+- [ ] Documentation update
+- [ ] Code refactoring
+- [ ] Accessibility improvement
 
-Details:
-* 
+### Details
+- Change 1: ...
+- Change 2: ...
+- Change 3: ...
 
-## 🧪 Verification & Testing Details
+## 🧪 Testing
 ### Manual Verification
-Describe how the changes were verified manually (browsers tested, sample payloads used, steps to reproduce, etc.):
-* 
+Describe how the changes were tested:
+- Steps to reproduce
+- Browsers/devices tested
+- Sample data used
 
-### Screenshots / Screencasts (if applicable)
-Add visual aids to help reviewers understand the visual impact of the changes.
+### Automated Testing
+- [ ] `npm test` passes
+- [ ] No new linting warnings
+
+### Screenshots (if applicable)
+Include before/after screenshots for UI changes.
 
 ## 🛡️ Checklist
-- [ ] My code conforms to the established style guidelines of this project
-- [ ] I have performed a self-review of my own code
-- [ ] My changes do not generate new compilation errors, linting warnings, or console logs
-- [ ] I have updated the documentation accordingly (or no updates are required)
-- [ ] The branch is rebased onto the latest master/main branch and there are no conflicts
+- [ ] Code follows project style and conventions
+- [ ] Self-review of code completed
+- [ ] No new warnings or errors introduced
+- [ ] Stateless/offline fallback modes still work
+- [ ] Documentation updated (if needed)
+- [ ] Branch is rebased on latest master and conflict-free
+- [ ] No secrets or credentials committed

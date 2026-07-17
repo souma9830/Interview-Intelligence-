@@ -1,6 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Award, Download, CheckCircle, RefreshCw, Sparkles, BookOpen, ThumbsUp, HelpCircle, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Award, Download, CheckCircle, RefreshCw, Sparkles, BookOpen, ThumbsUp, HelpCircle, AlertCircle, Printer } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import RadialProgress from '../components/Common/RadialProgress';
+import PerformanceChart from '../components/Common/PerformanceChart';
+import ReportExportModal from '../components/Common/ReportExportModal';
+import EmptyState from '../components/Common/EmptyState';
 
 const normalizeScore = (score, fallback = 0) => {
   const numericScore = Number(score);
@@ -21,50 +25,11 @@ export default function Result({ globalState, setGlobalState, setCurrentTab }) {
   const experience = globalState.experience || 'Mid-level (2-5 yrs)';
   const interviewId = globalState.interviewId || 'demo_session_active';
 
-  const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
-
-  const synthesizeReport = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/report/synthesize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer demo_token_active'
-        },
-        body: JSON.stringify({ 
-          interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
-          role: selectedRole,
-          experience: experience,
-          questions: globalState.interviewQuestions || [],
-          answers: globalState.userAnswers || []
-        })
-      });
-      const resJson = await response.json();
-      if (resJson.success && resJson.data) {
-        let data = resJson.data;
-        const violations = globalState.violationCount || 0;
-        if (violations > 0) {
-          const deduction = Math.min(violations * 5, 25);
-          data.overallScore = Math.max(0, (data.overallScore || 80) - deduction);
-          data.weaknesses = [...(data.weaknesses || []), `Integrity Warning: Detected ${violations} instance(s) of tab-switching or exiting fullscreen mode.`];
-        }
-        data.resumeScore = data.resumeScore || 85;
-        data.interviewScore = data.interviewScore || 82;
-        data.codingScore = data.codingScore || 88;
-        setReportData(data);
-      } else {
-        triggerLocalFallback();
-      }
-    } catch {
-      triggerLocalFallback();
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [exportModalOpen, setExportModalOpen] = useState(false);
 
   const triggerLocalFallback = () => {
     const isCodeGood = !!globalState.finalCode;
@@ -122,9 +87,60 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
     });
   };
 
-  useEffect(() => { synthesizeReport(); }, [interviewId, selectedRole]);
+  useEffect(() => {
+    const controller = new AbortController();
 
-  const handleDownload = () => {
+    const synthesizeReport = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/report/synthesize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer demo_token_active'
+          },
+          body: JSON.stringify({ 
+            interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
+            role: selectedRole,
+            experience: experience,
+            questions: globalState.interviewQuestions || [],
+            answers: globalState.userAnswers || [],
+            questionScores: globalState.questionScores || []
+          }),
+          signal: controller.signal
+        });
+        const resJson = await response.json();
+        if (resJson.success && resJson.data) {
+          let data = resJson.data;
+          const violations = globalState.violationCount || 0;
+          if (violations > 0) {
+            const deduction = Math.min(violations * 5, 25);
+            data.overallScore = Math.max(0, (data.overallScore || 80) - deduction);
+            data.weaknesses = [...(data.weaknesses || []), `Integrity Warning: Detected ${violations} instance(s) of tab-switching or exiting fullscreen mode.`];
+          }
+          data.resumeScore = data.resumeScore || 85;
+          data.interviewScore = data.interviewScore || 82;
+          data.codingScore = data.codingScore || 88;
+          setReportData(data);
+        } else {
+          triggerLocalFallback();
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          console.log('[Synthesize Aborted] Request was cancelled.');
+          return;
+        }
+        triggerLocalFallback();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    synthesizeReport();
+    return () => controller.abort();
+  }, [interviewId, selectedRole, experience, globalState.interviewQuestions, globalState.userAnswers, globalState.violationCount]);
+
+  const handleDownload = useCallback(() => {
     if (!reportData) return;
     const exportReport = normalizeReportScores(reportData);
     setDownloading(true);
@@ -132,104 +148,39 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
     setTimeout(() => {
       setDownloading(false);
       setDownloaded(true);
+      generateAssessmentPDF(exportReport, selectedRole);
+    }, 1000);
+  }, [reportData, selectedRole]);
 
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const colPrimary = [15, 15, 15]; // Pure deep black/grey for minimal layout
-      const colAccent = [50, 50, 50];
-
-      doc.setFillColor(...colPrimary);
-      doc.rect(0, 0, 210, 32, 'F');
-
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(20);
-      doc.text('CAMSENSE AI ASSESSMENT', 15, 15);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(150, 150, 150);
-      doc.text('CANDIDATE INTERVIEW COMPOSITE PERFORMANCE REPORT', 15, 23);
-
-      let y = 45;
-      doc.setDrawColor(220, 220, 220);
-      doc.setFillColor(250, 250, 250);
-      doc.rect(14, y, 182, 28, 'FD');
-
-      doc.setTextColor(15, 15, 15);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.text('ASSESSMENT DATA METRICS', 18, y + 7);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Candidate: Camsense Platform Participant`, 18, y + 14);
-      doc.text(`Target Track: ${selectedRole}`, 18, y + 20);
-      doc.text(`Difficulty: ${globalState.difficulty || 'Medium'}`, 110, y + 14);
-      doc.text(`Overall Score: ${exportReport.overallScore}%`, 110, y + 20);
-
-      y += 40;
-      doc.setDrawColor(15, 15, 15);
-      doc.line(14, y, 196, y);
-
-      doc.setTextColor(...colPrimary);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.text('COMPOSITE SCORES BREAKDOWN', 14, y + 7);
-
-      doc.setFillColor(245, 245, 245);
-      doc.rect(14, y + 12, 56, 16, 'F');
-      doc.setTextColor(100, 100, 100);
-      doc.setFontSize(8);
-      doc.text('RESUME SCORE', 18, y + 18);
-      doc.setTextColor(15, 15, 15);
-      doc.setFontSize(12);
-      doc.text(`${exportReport.resumeScore}%`, 18, y + 25);
-
-      doc.setFillColor(245, 245, 245);
-      doc.rect(76, y + 12, 56, 16, 'F');
-      doc.setTextColor(100, 100, 100);
-      doc.setFontSize(8);
-      doc.text('INTERVIEW SCORE', 80, y + 18);
-      doc.setTextColor(15, 15, 15);
-      doc.setFontSize(12);
-      doc.text(`${exportReport.interviewScore}%`, 80, y + 25);
-
-      doc.setFillColor(245, 245, 245);
-      doc.rect(138, y + 12, 56, 16, 'F');
-      doc.setTextColor(100, 100, 100);
-      doc.setFontSize(8);
-      doc.text('CODING SCORE', 142, y + 18);
-      doc.setTextColor(15, 15, 15);
-      doc.setFontSize(12);
-      doc.text(`${exportReport.codingScore}%`, 142, y + 25);
-
-      y += 42;
-      doc.setTextColor(...colPrimary);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.text('AI INTERVIEW VERDICT REPORT', 14, y);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      const snippet = reportData.feedbackReport.replace(/###|##|#|\*/g, '').trim();
-      doc.text(snippet, 14, y + 8, { maxWidth: 182 });
-
-      doc.setFontSize(7.5);
-      doc.setTextColor(180, 180, 180);
-      doc.text('REPORT GENERATED BY CAMSENSE AI ENGINE. CONFIDENTIAL.', 14, 285);
-
-      doc.save(`camsense_assessment_${selectedRole.toLowerCase().replace(/\s+/g, '_')}.pdf`);
-    }, 2000);
-  };
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', background: '#0a0a0a', fontFamily: 'Inter, sans-serif' }}>
-        <RefreshCw size={28} color="#555" style={{ animation: 'spin 1s linear infinite' }} />
-        <p style={{ fontSize: '13px', color: '#555' }}>Synthesizing assessment report diagnostics…</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ maxWidth: '840px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px', gap: '12px' }}>
+          <RefreshCw size={20} style={{ animation: 'spin 1s linear infinite' }} color="#888" />
+          <span style={{ fontSize: '13px', color: '#888' }}>Generating your comprehensive assessment report...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!reportData) {
+    return (
+      <div style={{ maxWidth: '840px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
+          <AlertCircle size={32} color="#333" style={{ margin: '0 auto 16px' }} />
+          <p style={{ fontSize: '14px', color: '#888', margin: '0 0 8px' }}>No report data available</p>
+          <p style={{ fontSize: '12px', color: '#555', margin: '0 0 16px' }}>Please complete an interview session before viewing results.</p>
+          <button
+            onClick={() => setCurrentTab('setup')}
+            style={{ marginTop: '8px', padding: '10px 20px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+          >
+            Start Setup Session
+          </button>
+        </div>
       </div>
     );
   }
@@ -253,10 +204,7 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
         <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '20px' }}>
           <div>
             <span style={{ fontSize: '11px', fontWeight: '600', color: '#aaa', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '16px' }}>AI Composite Grading</span>
-            <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: '#0d0d0d', border: '2px solid #222', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
-              <span style={{ fontSize: '32px', fontWeight: '700', color: '#fff' }}>{report.overallScore}%</span>
-              <span style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>{report.overallScore > 85 ? 'Grade A' : 'Grade B'}</span>
-            </div>
+            <RadialProgress score={report.overallScore} size={130} strokeWidth={10} title={report.overallScore > 85 ? 'Grade A' : 'Grade B'} />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -270,16 +218,15 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
             </div>
 
             <button
-              onClick={handleDownload}
-              disabled={downloading}
+              onClick={() => setExportModalOpen(true)}
               style={{
-                width: '100%', padding: '10px', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: downloading ? 'not-allowed' : 'pointer',
-                background: downloading ? '#1a1a1a' : '#fff',
-                color: downloading ? '#555' : '#000',
+                width: '100%', padding: '10px', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                background: '#fff',
+                color: '#000',
                 transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               }}
             >
-              {downloading ? 'Compiling PDF…' : downloaded ? 'Report Exported' : 'Export System PDF'}
+              <Download size={14} /> Export Report
             </button>
           </div>
         </div>
@@ -290,37 +237,13 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
             Aptitude Matrix Breakdown
           </h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500' }}>
-                <span style={{ color: '#ccc' }}>Resume Profile Match</span>
-                <span style={{ color: '#fff', fontWeight: '600' }}>{report.resumeScore}%</span>
-              </div>
-              <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${report.resumeScore}%`, background: '#fff', borderRadius: '2px' }} />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500' }}>
-                <span style={{ color: '#ccc' }}>Interview & Verbal Round</span>
-                <span style={{ color: '#fff', fontWeight: '600' }}>{report.interviewScore}%</span>
-              </div>
-              <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${report.interviewScore}%`, background: '#fff', borderRadius: '2px' }} />
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500' }}>
-                <span style={{ color: '#ccc' }}>Coding Environment Round</span>
-                <span style={{ color: '#fff', fontWeight: '600' }}>{report.codingScore}%</span>
-              </div>
-              <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${report.codingScore}%`, background: '#fff', borderRadius: '2px' }} />
-              </div>
-            </div>
-          </div>
+          <PerformanceChart
+            scores={[
+              { category: 'Resume Profile Match', score: report.resumeScore },
+              { category: 'Interview & Verbal Round', score: report.interviewScore },
+              { category: 'Coding Environment Round', score: report.codingScore }
+            ]}
+          />
 
           <div style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: '600', color: '#ccc', textTransform: 'uppercase' }}>Hiring recommendation verdict</span>
@@ -441,6 +364,14 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
         </button>
       </div>
 
+    <ReportExportModal
+        open={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        onDownload={handleDownload}
+        onPrint={handlePrint}
+        downloading={downloading}
+        downloaded={downloaded}
+      />
     </div>
   );
 }

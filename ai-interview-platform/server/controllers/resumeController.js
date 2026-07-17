@@ -1,9 +1,9 @@
-// Removed Resume model import as we are fully stateless
 const { extractTextFromPDF } = require('../utils/pdfParser');
 const { extractResumeData, analyzeSkillsWithGemini } = require('../services/geminiService');
 const mammoth = require('mammoth');
 const path = require('path');
 const fs = require('fs');
+const { sendSuccess, sendError, handleControllerError } = require('../utils/apiResponse');
 
 /**
  * Resume Upload Flow (from diagram):
@@ -15,33 +15,36 @@ exports.uploadResume = async (req, res) => {
     const uploadedFile = req.file || req.files?.resume?.[0] || req.files?.file?.[0];
 
     if (!uploadedFile) {
-      return res.status(400).json({ success: false, message: 'Please provide a PDF or DOCX resume file.' });
+      return sendError(res, 'Please provide a PDF or DOCX resume file.', 400);
     }
 
     const { originalname, buffer, mimetype } = uploadedFile;
     console.log(`[Resume Upload] Received: ${originalname} (${mimetype})`);
 
-    // Step 1: Extract raw text from PDF or DOCX using the shared utility
     let rawText = '';
-    if (mimetype === 'application/pdf' || originalname.endsWith('.pdf')) {
-      rawText = await extractTextFromPDF(buffer);
-    } else if (
-      mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      originalname.endsWith('.docx')
-    ) {
-      const result = await mammoth.extractRawText({ buffer });
-      rawText = result.value;
-    } else {
-      return res.status(400).json({ success: false, message: 'Only PDF and DOCX files are supported.' });
+    try {
+      if (mimetype === 'application/pdf' || originalname.endsWith('.pdf')) {
+        rawText = await extractTextFromPDF(buffer);
+      } else if (
+        mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        originalname.endsWith('.docx')
+      ) {
+        const result = await mammoth.extractRawText({ buffer });
+        rawText = result.value;
+      } else {
+        return sendError(res, 'Only PDF and DOCX files are supported.', 400);
+      }
+    } catch (parseError) {
+      console.error(`[Resume Upload] Parsing failed for ${originalname}:`, parseError.message);
+      return sendError(res, 'Could not extract text from this file. The document may be corrupted, encrypted, or password-protected. Please upload a valid, unencrypted PDF or DOCX.', 400);
     }
 
     if (!rawText || rawText.trim().length < 50) {
-      return res.status(400).json({ success: false, message: 'Could not extract readable text from this file. Please try another file.' });
+      return sendError(res, 'Could not extract readable text from this file. Please try another file.', 400);
     }
 
     console.log(`[Resume Upload] Extracted ${rawText.length} characters. Sending to Gemini...`);
 
-    // Step 2: Try Gemini AI first, fall back to local parser if Gemini is unavailable
     let geminiData;
     let parseSource = 'gemini';
 
@@ -61,7 +64,6 @@ exports.uploadResume = async (req, res) => {
       parseSource = 'local';
     }
 
-    // Step 3: Save file to disk (use /tmp in serverless environments like Vercel)
     const uploadDir = process.env.VERCEL
       ? '/tmp'
       : path.join(__dirname, '../../uploads');
@@ -72,26 +74,20 @@ exports.uploadResume = async (req, res) => {
 
     console.log(`[Resume Upload] Processed via ${parseSource}. Skills extracted: ${geminiData.skills?.length || 0}`);
 
-    res.status(200).json({
-      success: true,
-      message: parseSource === 'gemini'
-        ? `Resume analyzed by Gemini AI. Extracted ${geminiData.skills?.length || 0} skills.`
-        : `Resume analyzed locally (AI temporarily unavailable). Extracted ${geminiData.skills?.length || 0} skills. Your interview will still work normally.`,
-      data: {
-        id: `stateless_${Date.now()}`,
-        fileName: originalname,
-        skills: geminiData.skills || [],
-        education: geminiData.education || [],
-        experience: geminiData.experience || [],
-        projects: geminiData.projects || [],
-        summary: geminiData.summary || '',
-        extractedText: rawText
-      }
-    });
-
+    sendSuccess(res, {
+      id: `stateless_${Date.now()}`,
+      fileName: originalname,
+      skills: geminiData.skills || [],
+      education: geminiData.education || [],
+      experience: geminiData.experience || [],
+      projects: geminiData.projects || [],
+      summary: geminiData.summary || '',
+      extractedText: rawText
+    }, 200, parseSource === 'gemini'
+      ? `Resume analyzed by Gemini AI. Extracted ${geminiData.skills?.length || 0} skills.`
+      : `Resume analyzed locally (AI temporarily unavailable). Extracted ${geminiData.skills?.length || 0} skills. Your interview will still work normally.`);
   } catch (error) {
-    console.error('[Resume Upload] Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to upload resume');
   }
 };
 
@@ -101,9 +97,9 @@ exports.uploadResume = async (req, res) => {
  */
 exports.getResume = async (req, res) => {
   try {
-    res.status(404).json({ success: false, message: 'Persistent resume profiles are disabled in stateless mode.' });
+    sendError(res, 'Persistent resume profiles are disabled in stateless mode.', 404);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to get resume');
   }
 };
 
@@ -116,14 +112,13 @@ exports.analyzeJobDescription = async (req, res) => {
   try {
     const { jobDescription } = req.body;
     if (!jobDescription || jobDescription.trim().length < 20) {
-      return res.status(400).json({ success: false, message: 'Please paste a complete job description (at least 20 characters).' });
+      return sendError(res, 'Please paste a complete job description (at least 20 characters).', 400);
     }
 
-    // In stateless mode, the frontend must pass the resume content to this endpoint
     const { resumeContent } = req.body;
     
     if (!resumeContent) {
-      return res.status(400).json({ success: false, message: 'Missing resume content in stateless payload.' });
+      return sendError(res, 'Missing resume content in stateless payload.', 400);
     }
 
     let analysisResult;
@@ -150,16 +145,10 @@ exports.analyzeJobDescription = async (req, res) => {
       };
     }
 
-    res.status(200).json({
-      success: true,
-      message: analysisResult.source === 'local-fallback'
-        ? 'Job description analyzed locally (AI temporarily unavailable)'
-        : 'Job description analyzed with Gemini AI',
-      data: analysisResult
-    });
-
+    sendSuccess(res, analysisResult, 200, analysisResult.source === 'local-fallback'
+      ? 'Job description analyzed locally (AI temporarily unavailable)'
+      : 'Job description analyzed with Gemini AI');
   } catch (error) {
-    console.error('[JD Analysis] Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to analyze job description');
   }
 };

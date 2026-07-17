@@ -6,9 +6,33 @@ const interviewRoutes = require('../routes/interviewRoutes');
 // Mock auth middleware to bypass Firebase token checks
 jest.mock('../middleware/authMiddleware', () => ({
   protect: (req, res, next) => {
-    req.user = { _id: '664e4ea4a93a40498eb79e2a', name: 'Demo Candidate', email: 'candidate@camsense.ai' };
+    // If testing start validation rejection, mock user with no resume
+    if (req.path === '/start' && (!req.body.resumeSkills || req.body.resumeSkills.length === 0)) {
+      req.user = { _id: 'no_resume_user', name: 'Demo Candidate', email: 'candidate@camsense.ai' };
+    } else {
+      req.user = { _id: '664e4ea4a93a40498eb79e2a', name: 'Demo Candidate', email: 'candidate@camsense.ai' };
+    }
     next();
   }
+}));
+
+// Mock Mongoose Resume model to avoid database connection buffering timeouts
+jest.mock('../models/Resume', () => ({
+  findOne: jest.fn().mockImplementation((query) => {
+    // If testing the rejection test case, we query with no resume
+    if (query && query.user === 'no_resume_user') {
+      return {
+        lean: jest.fn().mockResolvedValue(null)
+      };
+    }
+    return {
+      lean: jest.fn().mockResolvedValue({
+        user: '664e4ea4a93a40498eb79e2a',
+        skills: ['React', 'Node.js'],
+        summary: 'Frontend engineer with production React experience'
+      })
+    };
+  })
 }));
 
 // Mock geminiService responses

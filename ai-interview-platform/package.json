@@ -2,6 +2,7 @@
   "name": "ai-interview-platform",
   "version": "1.0.0",
   "description": "AI Interview Platform with mock interviews, coding tests, and detailed reports",
+  "license": "MIT",
   "scripts": {
     "start": "node server/server.js",
     "preserver": "npx kill-port 5000",
@@ -9,7 +10,13 @@
     "client": "npm run dev --prefix client",
     "build": "npm run build --prefix client",
     "postinstall": "npm install --prefix client",
-    "test": "jest --runInBand --detectOpenHandles"
+    "test": "jest --runInBand --detectOpenHandles --forceExit",
+    "lint": "eslint . --ext js --ignore-pattern client/ --ignore-pattern node_modules/",
+    "lint:client": "npm run lint --prefix client",
+    "lint:all": "npm run lint && npm run lint:client",
+    "validate-env": "node scripts/validate-env.js",
+    "migrate": "node -e \"require('./server/utils/database').connectDatabase().then(() => { require('./server/db/migrations/migrationRunner').runMigrations().then(() => process.exit(0)).catch(() => process.exit(1)); })\"",
+    "migrate:rollback": "node -e \"require('./server/utils/database').connectDatabase().then(() => { require('./server/db/migrations/migrationRunner').rollbackLastMigration().then(() => process.exit(0)).catch(() => process.exit(1)); })\""
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -17,14 +24,21 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-validator": "^7.3.2",
     "firebase-admin": "^13.10.0",
+    "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mammoth": "^1.12.0",
+    "mongo-sanitize": "^1.1.0",
+    "mongoose": "^9.7.1",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^9.0.1",
-    "pdf-parse": "^1.1.1"
+    "pdf-parse": "^1.1.1",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
+    "eslint": "^8.57.0",
     "jest": "^29.7.0",
     "nodemon": "^3.1.0",
     "supertest": "^6.3.4"

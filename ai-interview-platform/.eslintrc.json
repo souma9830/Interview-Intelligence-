@@ -1,0 +1,24 @@
+{
+  "env": {
+    "node": true,
+    "es2024": true,
+    "jest": true
+  },
+  "parserOptions": {
+    "ecmaVersion": "latest"
+  },
+  "extends": ["eslint:recommended"],
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-console": "off",
+    "prefer-const": "warn",
+    "no-var": "error",
+    "eqeqeq": ["warn", "smart"],
+    "no-process-exit": "warn",
+    "no-throw-literal": "error",
+    "prefer-template": "warn",
+    "no-undef": "error",
+    "no-redeclare": "warn"
+  },
+  "ignorePatterns": ["node_modules", "dist", "build", "coverage"]
+}

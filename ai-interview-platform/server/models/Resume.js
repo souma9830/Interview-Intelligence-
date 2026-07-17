@@ -44,4 +44,8 @@ const ResumeSchema = new mongoose.Schema({
   },
 });
 
+ResumeSchema.index({ user: 1 }, { unique: true });
+ResumeSchema.index({ skills: 1 });
+ResumeSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('Resume', ResumeSchema);

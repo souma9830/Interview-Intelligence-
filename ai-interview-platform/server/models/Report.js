@@ -54,4 +54,8 @@ const ReportSchema = new mongoose.Schema({
   },
 });
 
+ReportSchema.index({ interview: 1 }, { unique: true });
+ReportSchema.index({ user: 1, createdAt: -1 });
+ReportSchema.index({ overallScore: -1 });
+
 module.exports = mongoose.model('Report', ReportSchema);

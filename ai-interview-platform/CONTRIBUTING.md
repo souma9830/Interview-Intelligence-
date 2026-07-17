@@ -1,90 +1,228 @@
-# Contributing to Camsense AI
+# Contributing to Interview Intelligence
 
-Thank you for your interest in contributing to Camsense AI! We want to build the most robust, secure, and beautiful open-source AI mock interview platform, and your contributions are key to making this happen.
+Thank you for your interest in contributing! This document provides guidelines and instructions for contributing to this project.
 
-As a project admin, I have identified several codebase **loopholes** (security risks, design limitations, and code smells) below. We encourage you to tackle any of these issues to improve the platform's stability and enterprise readiness.
+## Code of Conduct
 
----
+- Be respectful and inclusive
+- Focus on constructive feedback
+- Help create a welcoming environment
 
-## 🔍 Identified Loopholes & Good First Issues
+## How to Contribute
 
-Here is the list of major improvements needed in the codebase. Please feel free to open a Pull Request addressing any of these:
+### Reporting Bugs
 
-### 1. 🛡️ Authentication Bypass Vulnerability
-*   **File:** [`server/middleware/authMiddleware.js`](file:///c:/Users/SOUMADEEP/OneDrive/Desktop/Education/ai-interview-platform/server/middleware/authMiddleware.js)
-*   **The Issue:** On line 15, the token verification check includes:
-    ```javascript
-    if (token === 'demo_token_active' || token.length < 50)
-    ```
-    This allows any token shorter than 50 characters (e.g. `Bearer admin`) to automatically bypass Firebase Auth verification and assume a full "Demo Candidate" profile in any environment.
-*   **The Fix:** Restrict the bypass logic strictly to development environments (`process.env.NODE_ENV === 'development'`) or remove the length-based bypass altogether, requiring real Firebase JWT token validation.
+1. Check existing issues first
+2. Create a new issue with:
+   - Clear title describing the problem
+   - Steps to reproduce
+   - Expected vs actual behavior
+   - Environment details (OS, browser, Node version)
 
-### 2. 💽 File Storage Leak & Potential DoS
-*   **File:** [`server/controllers/resumeController.js`](file:///c:/Users/SOUMADEEP/OneDrive/Desktop/Education/ai-interview-platform/server/controllers/resumeController.js)
-*   **The Issue:** When a resume is uploaded, it writes the raw buffer to disk in `uploads/` via `fs.writeFileSync`. Since the application is currently running statelessly, these files are never referenced again and are never deleted, which will eventually exhaust server disk storage and trigger a Denial of Service (DoS) crash.
-*   **The Fix:** Either disable disk writing entirely in stateless mode, implement a cron-like cleanup worker that automatically deletes temp uploads older than 1 hour, or add support for secure S3/Cloudinary object uploads.
+### Suggesting Features
 
-### 3. 🚨 Unhandled JSON Parsing Crashes
-*   **File:** [`server/services/geminiService.js`](file:///c:/Users/SOUMADEEP/OneDrive/Desktop/Education/ai-interview-platform/server/services/geminiService.js)
-*   **The Issue:** The LLM services call `JSON.parse(result.response.text())` directly in several paths (e.g., `extractResumeData`, `analyzeSkillsWithGemini`, `generateQuestionsFromResume`, `evaluateAnswer`). If the Gemini API returns markdown formatting wraps (like ` ```json ... ``` `) or malformed JSON, the server crashes with a 500 error on the frontend.
-*   **The Fix:** Wrap parsing blocks in a helper function located in `server/utils/sanitizers/jsonSanitizer.js` that sanitizes markdown blocks and utilizes a try-catch block to supply a schema-valid fallback structure instead of throwing.
+1. Check existing feature requests
+2. Create an issue with:
+   - Problem statement
+   - Proposed solution
+   - Alternatives considered
 
-### 4. 🔗 Utility Mismatch & Import Bug
-*   **File:** [`server/controllers/resumeController.js`](file:///c:/Users/SOUMADEEP/OneDrive/Desktop/Education/ai-interview-platform/server/controllers/resumeController.js)
-*   **The Issue:** The controller imports `extractTextFromBuffer` on line 2, which does not exist in `pdfParser.js` (which actually exports `extractTextFromPDF`). Consequently, the controller requires `pdf-parse` again locally to process buffers, causing code duplication and bypassing the regex ASCII fallback logic implemented in `pdfParser.js`.
-*   **The Fix:** Change the import on line 2 to match the exported helper `extractTextFromPDF` and refactor the controller's PDF handling to utilize the utility, importing the local parser fallback from `server/utils/parsers/resumeParser.js`.
+### Submitting Changes
 
-### 5. 🛑 Missing Global Error-Handling Middleware
-*   **File:** [`server/app.js`](file:///c:/Users/SOUMADEEP/OneDrive/Desktop/Education/ai-interview-platform/server/app.js)
-*   **The Issue:** The Express application registers routes but fails to define a final error-catching middleware `(err, req, res, next) => { ... }`. When an unhandled error occurs, Node/Express returns a default HTML stack trace to the user, exposing folders, internal library structures, and system configurations.
-*   **The Fix:** Append a centralized global error-handler middleware `server/middleware/error/errorHandler.js` to the end of the middleware chain in `app.js` to return standardized JSON error bodies:
-    ```javascript
-    app.use((err, req, res, next) => {
-      res.status(err.status || 500).json({ success: false, message: err.message || 'Internal Server Error' });
-    });
-    ```
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Make your changes
+4. Run tests: `npm test`
+5. Run linter: `npm run lint`
+6. Commit with descriptive message
+7. Push to your fork
+8. Create a Pull Request
 
-### 6. 🗄️ Database Layer Inconsistency
-*   **Files:** [`database/schema.sql`](file:///c:/Users/SOUMADEEP/OneDrive/Desktop/Education/ai-interview-platform/database/schema.sql) and [`server/models/`](file:///c:/Users/SOUMADEEP/OneDrive/Desktop/Education/ai-interview-platform/server/models)
-*   **The Issue:** The codebase has a PostgreSQL SQL file (`database/schema.sql`) and several Mongoose model files (e.g., `User.js`, `Interview.js`, `Report.js`) under MongoDB, but neither are connected to the routes. The application runs statelessly, ignoring all database logic.
-*   **The Fix:** Establish a clean configuration flag (e.g., `DATABASE_PROVIDER=mongodb|postgres|stateless`) and implement the database integration in the controllers so users can select between stateless sandbox testing or persistent record storage.
+## Development Setup
 
-### 7. 🧭 Router Navigation Limitation
-*   **File:** [`client/src/App.jsx`](file:///c:/Users/SOUMADEEP/OneDrive/Desktop/Education/ai-interview-platform/client/src/App.jsx)
-*   **The Issue:** The React application manages pages using a flat `currentTab` state wrapper instead of a router. This causes page-refresh state loss (resetting the interview session), blocks the browser back button, and makes specific paths unshareable.
-*   **The Fix:** Transition the layout from state-based tab switches to `react-router-dom` to support browser history and deep linking.
+See [DEVELOPMENT_SETUP.md](DEVELOPMENT_SETUP.md) for detailed instructions.
 
-### 8. 🌐 Node.js Runtime Version Compatibility
-*   **File:** [`server/controllers/interviewController.js`](file:///c:/Users/SOUMADEEP/OneDrive/Desktop/Education/ai-interview-platform/server/controllers/interviewController.js) (Line 159)
-*   **The Issue:** The controller uses Node's global `fetch` API to talk to JDoodle. Global `fetch` is only natively supported in Node.js v18+. If developers deploy on older Node LTS releases, the execution throws a ReferenceError.
-*   **The Fix:** Import `node-fetch` or utilize standard HTTP libraries like `axios` to ensure compatibility across older runtime environments.
+## Branch Naming
 
----
+| Prefix | Purpose |
+|--------|---------|
+| `feature/` | New features |
+| `fix/` | Bug fixes |
+| `refactor/` | Code refactoring |
+| `docs/` | Documentation |
+| `test/` | Test additions |
+| `chore/` | Maintenance tasks |
 
-## 🛠️ Contribution Workflow
+Example: `feature/add-dark-mode-toggle`
 
-### 1. Setup Your Branch
-1. Fork the repository and clone it locally.
-2. Create a new branch naming it relative to the issue you are fixing:
-   ```bash
-   git checkout -b fix/jwt-bypass-vulnerability
-   # or
-   git checkout -b feat/centralized-error-handling
-   ```
+## Commit Messages
 
-### 2. Implementation Rules
-- **Stateless/Stateful Grace**: Ensure that whatever changes you make do not break the "Offline/Stateless" fallback mechanisms. Developers should be able to spin up the codebase without paid API keys and still test client flows.
-- **Maintain Comments**: Maintain structural comments in the files you modify.
-- **Verify Linting**: Run `npm run lint` in the client directory to check for styling and syntax violations before committing.
+Follow conventional commits:
 
-### 3. Commit Guidelines
-We follow semantic commit styling. Ensure your commits are structured clean:
-- `fix: resolve auth length bypass in authMiddleware`
-- `feat: implement global express error handling response`
-- `docs: update setup steps for PostgreSQL config`
+```
+type(scope): description
 
-### 4. Opening a Pull Request
-When submitting your PR:
-1. Reference the loophole or issue number you are resolving.
-2. Provide a brief summary of how your fix resolves the vulnerability or enhances code quality.
-3. List the manual testing steps you ran to verify that the app still compiles.
+[optional body]
+
+[optional footer]
+```
+
+### Types
+
+- **feat**: New feature
+- **fix**: Bug fix
+- **docs**: Documentation changes
+- **style**: Code style changes (formatting)
+- **refactor**: Code refactoring
+- **test**: Adding/updating tests
+- **chore**: Maintenance tasks
+
+### Examples
+
+```
+feat(auth): implement OTP verification
+fix(dashboard): resolve state update on unmounted component
+docs(readme): add deployment instructions
+refactor(hooks): extract useFetch from useApi
+```
+
+## Code Style
+
+### ESLint
+
+This project uses ESLint to enforce code quality. Configuration files are at:
+- **Server**: `.eslintrc.json` (root, CommonJS environment)
+- **Client**: `client/.eslintrc.cjs` (browser/JSX environment)
+
+Run linting before committing:
+```bash
+# Server-side lint
+npm run lint
+
+# Client-side lint
+npm run lint:client
+
+# Both
+npm run lint:all
+```
+
+### JavaScript/JSX
+
+- Use ES6+ features
+- Prefer `const` and `let` over `var`
+- Use arrow functions for callbacks
+- Destructure when possible
+- Use template literals for string interpolation
+
+### React
+
+- Use functional components with hooks
+- Keep components small and focused
+- Extract reusable logic into custom hooks
+- Use meaningful prop and variable names
+- Follow the Rules of Hooks (enforced by eslint-plugin-react-hooks)
+
+### CSS
+
+- Use CSS custom properties for theming
+- Prefer inline styles for component-specific styling
+- Follow existing style patterns
+
+## Testing Guidelines
+
+### Client Tests
+
+```bash
+cd client
+npm test
+```
+
+- Test component rendering
+- Test user interactions
+- Test hook behavior
+- Mock API calls
+
+### Server Tests
+
+```bash
+cd server
+npm test
+```
+
+- Test API endpoints
+- Test error handling
+- Test authentication
+- Mock external services
+
+## Pull Request Process
+
+1. **Create descriptive PR title**
+   - Use conventional commit format
+   - Reference related issues
+
+2. **Fill out PR template**
+   - Describe changes
+   - List modifications
+   - Add testing steps
+   - Complete checklist
+
+3. **Ensure CI passes**
+   - All tests pass
+   - No lint errors
+   - Build succeeds
+
+4. **Request review**
+   - Tag relevant maintainers
+   - Address feedback promptly
+
+5. **Merge**
+   - Squash commits if needed
+   - Delete feature branch after merge
+
+## Code Review Guidelines
+
+### For Authors
+
+- Respond to all comments
+- Make requested changes promptly
+- Mark resolved conversations
+
+### For Reviewers
+
+- Be constructive and respectful
+- Focus on code quality and functionality
+- Suggest improvements, not just problems
+- Approve when satisfied
+
+## Project Structure
+
+```
+Interview-Intelligence-/
+├── ai-interview-platform/
+│   ├── client/           # React frontend
+│   │   ├── src/
+│   │   │   ├── components/
+│   │   │   ├── hooks/
+│   │   │   ├── pages/
+│   │   │   └── services/
+│   │   └── package.json
+│   └── server/           # Node.js backend
+│       ├── controllers/
+│       ├── middleware/
+│       ├── models/
+│       ├── routes/
+│       ├── services/
+│       └── package.json
+└── docs/                 # Documentation
+```
+
+## Getting Help
+
+- Check existing documentation
+- Search existing issues
+- Ask in discussions
+- Reach out to maintainers
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the MIT License.

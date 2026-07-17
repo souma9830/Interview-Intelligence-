@@ -1,58 +1,78 @@
 const { getStorageAdapter } = require('../repositories/storageAdapter');
+const { sendSuccess, sendCreated, sendError, handleControllerError } = require('../utils/apiResponse');
 
-const ALLOWED_ROLES = ['Frontend Engineer', 'Backend Engineer', 'Fullstack Engineer', 'AI / ML Engineer'];
+exports.getSchedule = async (req, res) => {
+  try {
+    const scheduleId = req.params.id;
+    const storage = getStorageAdapter();
+    if (storage && typeof storage.getSchedule === 'function') {
+      const schedule = await storage.getSchedule(scheduleId);
+      if (schedule) {
+        return sendSuccess(res, schedule);
+      }
+    }
+    sendSuccess(res, { scheduledAt: new Date(Date.now() + 300000).toISOString() });
+  } catch (error) {
+    handleControllerError(res, error, 'Failed to retrieve schedule');
+  }
+};
 
 exports.listSchedules = async (req, res) => {
   try {
-    const userId = req.user ? req.user._id : '664e4ea4a93a40498eb79e2a';
-    const schedules = await getStorageAdapter().listSchedules(userId);
-    res.json({ success: true, data: schedules });
+    const userId = req.user ? req.user._id || req.user.uid : null;
+    if (!userId) {
+      return sendError(res, 'Unauthorized', 401);
+    }
+    const storage = getStorageAdapter();
+    const schedules = await storage.listSchedules(userId);
+    const now = new Date();
+    const enriched = (schedules || []).map(s => ({
+      ...s,
+      status: new Date(s.scheduledAt) > now ? 'upcoming' : 'past',
+      canStart: new Date(s.scheduledAt) <= now && new Date(s.scheduledAt) > new Date(now - (s.durationMinutes || 45) * 60000)
+    }));
+    sendSuccess(res, enriched);
   } catch (error) {
-    console.error('List Schedules Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to list schedules');
   }
 };
 
 exports.createSchedule = async (req, res) => {
   try {
     const { role, scheduledAt, durationMinutes, notes } = req.body;
-    const userId = req.user ? req.user._id : '664e4ea4a93a40498eb79e2a';
-
     if (!role || !scheduledAt) {
-      return res.status(400).json({ success: false, message: 'Please specify role and scheduledAt' });
+      return sendError(res, 'Please specify role and scheduledAt', 400);
     }
-    if (!ALLOWED_ROLES.includes(role)) {
-      return res.status(400).json({ success: false, message: 'Invalid or unsupported role track' });
+    const scheduledDate = new Date(scheduledAt);
+    if (scheduledDate < new Date()) {
+      return sendError(res, 'Scheduled time must be in the future', 400);
     }
-
-    const date = new Date(scheduledAt);
-    if (Number.isNaN(date.getTime())) {
-      return res.status(400).json({ success: false, message: 'scheduledAt must be a valid date-time value' });
-    }
-    if (date.getTime() <= Date.now()) {
-      return res.status(400).json({ success: false, message: 'Interview schedule must be in the future' });
-    }
-
-    const safeDuration = Number(durationMinutes) || 45;
-    if (safeDuration < 15 || safeDuration > 180) {
-      return res.status(400).json({ success: false, message: 'durationMinutes must be between 15 and 180' });
-    }
-
-    const schedule = await getStorageAdapter().saveSchedule({
-      _id: `schedule_${Date.now()}`,
+    const userId = req.user ? req.user._id || req.user.uid : 'anonymous';
+    const storage = getStorageAdapter();
+    const saved = await storage.saveSchedule({
       user: userId,
       role,
-      scheduledAt: date.toISOString(),
-      durationMinutes: safeDuration,
-      notes: notes ? String(notes).slice(0, 500) : '',
+      scheduledAt: scheduledDate,
+      durationMinutes: durationMinutes || 45,
+      notes: notes || '',
       status: 'scheduled',
     });
-
-    res.status(201).json({ success: true, message: 'Interview scheduled successfully', data: schedule });
+    sendCreated(res, saved, 'Interview scheduled successfully');
   } catch (error) {
-    console.error('Create Schedule Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to create schedule');
   }
 };
 
-// Integrated NotificationService for scheduling
+exports.deleteSchedule = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return sendError(res, 'Schedule ID is required', 400);
+    }
+    const storage = getStorageAdapter();
+    await storage.deleteSchedule(id);
+    sendSuccess(res, null, 200, 'Schedule deleted successfully');
+  } catch (error) {
+    handleControllerError(res, error, 'Failed to delete schedule');
+  }
+};

@@ -1,100 +1,83 @@
 const admin = require('firebase-admin');
+const logger = require('../services/logger');
+const User = require('../models/User');
 
-/**
- * Determines if the application is running in a non-production environment.
- * Checks NODE_ENV explicitly — defaults to false when the variable is absent
- * so that misconfigured deploys never silently downgrade to demo mode.
- */
-const isDevelopment = () => {
-  const env = (process.env.NODE_ENV || '').toLowerCase().trim();
-  return env === 'development' || env === 'test';
-};
+const syncFirebaseUserToMongoDB = async (firebaseUser) => {
+  try {
+    if (!firebaseUser || !firebaseUser.email) return null;
 
-/**
- * Demo / sandbox user profile returned when the middleware operates
- * in development bypass mode.  Centralised here so every code path
- * that needs it references the same object shape.
- */
-const DEMO_USER_PROFILE = Object.freeze({
-  _id: '664e4ea4a93a40498eb79e2a',
-  name: 'Demo Candidate',
-  email: 'candidate@camsense.ai',
-});
+    const email = firebaseUser.email.toLowerCase().trim();
 
-/**
- * Express middleware that validates Firebase ID tokens carried in the
- * Authorization header (Bearer scheme).
- *
- * Security model
- * ──────────────
- * • Production  — every request MUST carry a valid Firebase JWT.
- * • Development — a hard-coded demo token (`demo_token_active`) is
- *                 accepted so that developers can test client flows
- *                 without burning Firebase quota.  The old "token.length < 50"
- *                 shortcut has been removed because it allowed trivial
- *                 auth bypass in any environment.
- */
-const protect = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
+    let mongoUser = await User.findOne({ email });
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // No Authorization header at all — allow demo passthrough only in dev
-    if (isDevelopment()) {
-      req.user = { ...DEMO_USER_PROFILE };
-      return next();
+    if (!mongoUser && firebaseUser.uid) {
+      mongoUser = await User.findOne({ firebaseUid: firebaseUser.uid });
     }
 
-    return res.status(401).json({
-      success: false,
-      message: 'Not authorized, no token provided',
-    });
-  }
+    if (!mongoUser) {
+      mongoUser = await User.create({
+        name: firebaseUser.name || email.split('@')[0] || 'User',
+        email,
+        firebaseUid: firebaseUser.uid,
+        password: `fb_${firebaseUser.uid}_${Date.now()}`,
+      });
+      console.log(`[Auth Sync] Auto-created MongoDB user for Firebase user: ${email}`);
+    } else if (!mongoUser.firebaseUid && firebaseUser.uid) {
+      mongoUser.firebaseUid = firebaseUser.uid;
+      await mongoUser.save();
+      console.log(`[Auth Sync] Linked firebaseUid to existing MongoDB user: ${email}`);
+    }
 
-  const token = authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Not authorized, malformed authorization header',
-    });
-  }
-
-  // Development-only: accept the known demo sentinel value
-  if (token === 'demo_token_active' && isDevelopment()) {
-    req.user = { ...DEMO_USER_PROFILE };
-    return next();
-  }
-
-  // ── Firebase JWT verification (production & development) ──────────
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-
-    req.user = {
-      _id: decodedToken.uid,
-      name: decodedToken.name || (decodedToken.email ? decodedToken.email.split('@')[0] : 'User'),
-      email: decodedToken.email || '',
-      picture: decodedToken.picture || '',
-    };
-
-    return next();
-  } catch (error) {
-    // Differentiate expired tokens from malformed ones for the client
-    const isExpired = error.code === 'auth/id-token-expired';
-    const statusCode = isExpired ? 401 : 403;
-    const clientMessage = isExpired
-      ? 'Session expired. Please sign in again.'
-      : 'Not authorized, token verification failed';
-
-    console.error(
-      `[Auth] Token verification failed — code: ${error.code || 'unknown'}, ` +
-      `message: ${error.message}, ip: ${req.ip}`
-    );
-
-    return res.status(statusCode).json({
-      success: false,
-      message: clientMessage,
-    });
+    return mongoUser;
+  } catch (err) {
+    if (err.code === 11000) {
+      console.warn(`[Auth Sync] Duplicate key handled for: ${firebaseUser?.email}`);
+      return await User.findOne({ email: firebaseUser?.email?.toLowerCase().trim() });
+    }
+    console.error('[Auth Sync] Error:', err.message);
+    return null;
   }
 };
 
-module.exports = { protect };
+exports.protect = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Unauthenticated' });
+    }
+    const token = authHeader.split(' ')[1];
+    if (process.env.NODE_ENV === 'development' && process.env.ALLOW_DEMO_TOKEN === 'true' && token === 'demo_token_active') {
+      logger.warn('Demo token accepted in development mode.');
+      req.user = { uid: 'demo_uid', _id: 'demo_uid', role: 'admin' };
+      return next();
+    }
+    const decoded = await admin.auth().verifyIdToken(token);
+    const userData = { ...decoded, _id: decoded.uid };
+    req.user = userData;
+
+    syncFirebaseUserToMongoDB(decoded).then(mongoUser => {
+      if (mongoUser) {
+        req.mongoUser = mongoUser;
+      }
+    }).catch(err => {
+      console.error('[Auth] Background sync failed:', err.message);
+    });
+
+    req.user = { ...decoded, _id: decoded.uid };
+    req.userId = decoded.uid;
+    syncFirebaseUserToMongoDB(decoded);
+    next();
+  } catch (err) {
+    logger.error('Token verification failed', { error: err.message });
+    res.status(401).json({ success: false, message: 'Authentication failed. Invalid or expired token.' });
+  }
+};
+
+exports.adminOnly = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    return next();
+  }
+  res.status(403).json({ success: false, message: 'Access denied: Administrators only' });
+};
+
+module.exports.syncFirebaseUserToMongoDB = syncFirebaseUserToMongoDB;

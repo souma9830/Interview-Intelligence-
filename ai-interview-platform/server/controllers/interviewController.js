@@ -1,6 +1,10 @@
 const { generateQuestionsFromResume, evaluateAnswer, synthesizeInterviewReport, evaluateCodingSolution } = require('../services/geminiService');
+const { parseScoreSafe } = require('../utils/geminiParser');
 const { getStorageAdapter } = require('../repositories/storageAdapter');
-// Utilizing caching service strategies to optimize LLM query volumes
+const CustomQuestionSet = require('../models/CustomQuestionSet');
+const cacheManager = require('../services/cache/cacheManager');
+const { sendSuccess, sendCreated, sendError, handleControllerError } = require('../utils/apiResponse');
+const jdoodleCompiler = require('../services/jdoodleCompiler');
 
 // @desc    Initialize a new mock interview session with Gemini-generated resume-based questions
 // @route   POST /api/interview/start
@@ -11,15 +15,21 @@ exports.startInterview = async (req, res) => {
     const userId = req.user ? req.user._id : '664e4ea4a93a40498eb79e2a';
 
     if (!role || !experience) {
-      return res.status(400).json({ success: false, message: 'Please specify target role and experience' });
+      return sendError(res, 'Please specify target role and experience', 400);
     }
-    if (!resumeText && (!Array.isArray(resumeSkills) || resumeSkills.length === 0) && !resumeSummary) {
-      return res.status(400).json({ success: false, message: 'Please upload and parse a resume before starting an interview session' });
+    if (!resumeText && (!Array.isArray(resumeSkills) || resumeSkills.length === 0) && !resumeSummary && !req.resumeData) {
+      return sendError(res, 'Please upload and parse a resume before starting an interview session', 400);
+    }
+
+    if (req.resumeData) {
+      const fallbackText = req.resumeData.extractedText || '';
+      const fallbackSkills = req.resumeData.skills || resumeSkills || [];
+      if (!resumeText && fallbackText) req.body.resumeText = fallbackText;
+      if ((!resumeSkills || resumeSkills.length === 0) && fallbackSkills.length > 0) req.body.resumeSkills = fallbackSkills;
     }
 
     console.log(`[Interview Start] Generating Gemini-powered resume-based questions for role: ${role}`);
 
-    // Generate personalised questions from Gemini using the candidate's actual resume profile
     const aiQuestions = await generateQuestionsFromResume({
       role,
       experience,
@@ -31,7 +41,6 @@ exports.startInterview = async (req, res) => {
       jobDescription: jobDescription || ''
     });
 
-    // Structure categorized questions array
     const questionsList = [];
 
     (aiQuestions.technical || []).forEach(q => {
@@ -44,7 +53,6 @@ exports.startInterview = async (req, res) => {
       questionsList.push({ questionText: q, category: 'coding', candidateAnswer: '' });
     });
 
-    // Safety fallback
     if (questionsList.length === 0) {
       questionsList.push(
         { questionText: 'Explain major architectural constraints of your primary tech stack.', category: 'technical', candidateAnswer: '' },
@@ -64,18 +72,14 @@ exports.startInterview = async (req, res) => {
       resumeSkills: resumeSkills || [],
       questions: questionsList,
       status: 'speaking_active',
+      scheduleId: req.activeSchedule ? req.activeSchedule._id || req.activeSchedule.id : null,
     };
 
     const persisted = await getStorageAdapter().saveInterview(interviewData);
 
-    res.status(201).json({
-      success: true,
-      message: 'Interview session initialized and persisted successfully',
-      data: persisted,
-    });
+    sendCreated(res, persisted, 'Interview session initialized and persisted successfully');
   } catch (error) {
-    console.error('Start Interview Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to start interview');
   }
 };
 
@@ -87,7 +91,7 @@ exports.submitAnswer = async (req, res) => {
     const { interviewId, questionIndex, answerText } = req.body;
 
     if (!interviewId || questionIndex === undefined || !answerText) {
-      return res.status(400).json({ success: false, message: 'Please specify interviewId, questionIndex, and answerText' });
+      return sendError(res, 'Please specify interviewId, questionIndex, and answerText', 400);
     }
 
     const storage = getStorageAdapter();
@@ -99,14 +103,9 @@ exports.submitAnswer = async (req, res) => {
       }
     }
 
-    res.json({
-      success: true,
-      message: `Answer for question index ${questionIndex} saved successfully`,
-      data: { _id: interviewId },
-    });
+    sendSuccess(res, { _id: interviewId }, 200, `Answer for question index ${questionIndex} saved successfully`);
   } catch (error) {
-    console.error('Submit Answer Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to submit answer');
   }
 };
 
@@ -118,15 +117,11 @@ exports.evaluateAnswerRealtime = async (req, res) => {
     const { interviewId, questionIndex, candidateAnswer, question, category, role } = req.body;
 
     if (!candidateAnswer || !question) {
-      return res.status(400).json({ success: false, message: 'Please provide candidateAnswer and question' });
+      return sendError(res, 'Please provide candidateAnswer and question', 400);
     }
 
     console.log(`[Evaluate] Running Gemini evaluation for Q${questionIndex + 1} - ${category}`);
 
-    // DB Save block removed since we are now fully stateless
-    console.log(`[Evaluate] Stateless evaluation running for ${category}`);
-
-    // Run Gemini evaluation
     const evaluation = await evaluateAnswer({
       question,
       candidateAnswer,
@@ -134,13 +129,9 @@ exports.evaluateAnswerRealtime = async (req, res) => {
       category: category || 'technical'
     });
 
-    res.json({
-      success: true,
-      data: evaluation
-    });
+    sendSuccess(res, evaluation);
   } catch (error) {
-    console.error('Real-time Evaluation Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to evaluate answer');
   }
 };
 
@@ -152,20 +143,19 @@ exports.evaluateCode = async (req, res) => {
     const { role, code, language, voiceExplanation, questionText } = req.body;
 
     if (!role || !code || !language) {
-      return res.status(400).json({ success: false, message: 'Please specify role, code submission, and language' });
+      return sendError(res, 'Please specify role, code submission, and language', 400);
     }
 
-    // Input safety and guard constraints
     const allowedRoles = ['Frontend Engineer', 'Backend Engineer', 'Fullstack Engineer', 'AI / ML Engineer'];
     const allowedLanguages = ['javascript', 'cpp', 'java', 'python'];
     if (!allowedRoles.includes(role)) {
-      return res.status(400).json({ success: false, message: 'Invalid or unsupported role track' });
+      return sendError(res, 'Invalid or unsupported role track', 400);
     }
     if (!allowedLanguages.includes(language.toLowerCase())) {
-      return res.status(400).json({ success: false, message: 'Invalid or unsupported coding language' });
+      return sendError(res, 'Invalid or unsupported coding language', 400);
     }
     if (code.length > 30000) {
-      return res.status(400).json({ success: false, message: 'Code size limit exceeded (maximum 30KB)' });
+      return sendError(res, 'Code size limit exceeded (maximum 30KB)', 400);
     }
 
     console.log(`[Code Evaluator] Executing ${language} code for exact output...`);
@@ -173,7 +163,6 @@ exports.evaluateCode = async (req, res) => {
     let compilerOutput = '';
     let compilerError = '';
 
-    // Check if JDoodle credentials exist for exact compilation
     if (process.env.JDOODLE_CLIENT_ID && process.env.JDOODLE_CLIENT_SECRET) {
       console.log('[Code Evaluator] JDoodle API credentials found. Executing strictly...');
       const jdoodleLangMap = {
@@ -203,7 +192,6 @@ exports.evaluateCode = async (req, res) => {
           compilerError = jdoodleData.error;
         } else {
           compilerOutput = jdoodleData.output;
-          // JDoodle combines stdout/stderr in output, but we can capture it
           if (compilerOutput.toLowerCase().includes('error') || compilerOutput.toLowerCase().includes('exception')) {
             compilerError = compilerOutput;
           }
@@ -221,22 +209,18 @@ exports.evaluateCode = async (req, res) => {
 
     const evaluation = await evaluateCodingSolution(code, language, role, voiceExplanation, compilerOutput, compilerError, questionText);
 
-    res.json({
-      success: true,
-      data: {
-        role,
-        language,
-        overallScore: evaluation.overallScore,
-        metrics: evaluation.metrics,
-        testCases: evaluation.testCases,
-        recommendation: evaluation.overallScore > 80
-          ? 'Exceptional architecture. Your code utilizes optimal standard vectors.'
-          : 'Enrich code declarations to conform to standard compiler boundaries.',
-      }
+    sendSuccess(res, {
+      role,
+      language,
+      overallScore: evaluation.overallScore,
+      metrics: evaluation.metrics,
+      testCases: evaluation.testCases,
+      recommendation: evaluation.overallScore > 80
+        ? 'Exceptional architecture. Your code utilizes optimal standard vectors.'
+        : 'Enrich code declarations to conform to standard compiler boundaries.',
     });
   } catch (error) {
-    console.error('Code Evaluation Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to evaluate code');
   }
 };
 
@@ -248,13 +232,11 @@ exports.submitAnswerAndGenerateFollowUp = async (req, res) => {
     const { interviewId, questionIndex, candidateAnswer } = req.body;
 
     if (questionIndex === undefined || !candidateAnswer) {
-      return res.status(400).json({ success: false, message: 'Please specify questionIndex and candidateAnswer' });
+      return sendError(res, 'Please specify questionIndex and candidateAnswer', 400);
     }
 
-    // Extract original question statelessly from the frontend if passed
     const originalQuestionText = req.body.originalQuestionText || 'General technical capability';
 
-    // Use Gemini for follow-up generation
     const { GoogleGenerativeAI } = require('@google/generative-ai');
     let followUpQuestionText = '';
 
@@ -284,23 +266,11 @@ Generate ONE focused follow-up question that drills deeper into a specific point
       followUpQuestionText = followUpBackups[questionIndex % followUpBackups.length];
     }
 
-    const followUpNode = {
-      questionText: `[Follow-Up] ${followUpQuestionText}`,
-      category: req.body.category || 'technical',
-      candidateAnswer: ''
-    };
-
-    // Return the follow-up question to the frontend to handle state
-    res.json({
-      success: true,
-      message: 'Gemini follow-up question generated (stateless)',
-      data: {
-        followUpQuestion: followUpNode.questionText
-      }
-    });
+    sendSuccess(res, {
+      followUpQuestion: `[Follow-Up] ${followUpQuestionText}`
+    }, 200, 'Gemini follow-up question generated (stateless)');
   } catch (error) {
-    console.error('Submit Answer & Follow-up Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to generate follow-up');
   }
 };
 
@@ -321,7 +291,7 @@ exports.analyzeResumeAndMatchSkills = async (req, res) => {
     }
 
     if (!resumeText) {
-      return res.status(400).json({ success: false, message: 'Please provide either a PDF resume upload or raw resume text' });
+      return sendError(res, 'Please provide either a PDF resume upload or raw resume text', 400);
     }
 
     const { extractResumeData, analyzeSkillsWithGemini } = require('../services/geminiService');
@@ -351,21 +321,17 @@ exports.analyzeResumeAndMatchSkills = async (req, res) => {
       };
     }
 
-    res.json({
-      success: true,
-      data: {
-        matchPercentage: jdAnalysis.matchPercentage,
-        matchingSkills: jdAnalysis.matchingSkills,
-        missingSkills: jdAnalysis.missingSkills,
-        resumeSkills: resumeData.skills,
-        extractedSnippet: resumeText.substring(0, 200) + '...',
-        recommendation: jdAnalysis.recommendation,
-        parsedProfile: resumeData
-      }
+    sendSuccess(res, {
+      matchPercentage: jdAnalysis.matchPercentage,
+      matchingSkills: jdAnalysis.matchingSkills,
+      missingSkills: jdAnalysis.missingSkills,
+      resumeSkills: resumeData.skills,
+      extractedSnippet: resumeText.substring(0, 200) + '...',
+      recommendation: jdAnalysis.recommendation,
+      parsedProfile: resumeData
     });
   } catch (error) {
-    console.error('Resume Analysis Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to analyze resume');
   }
 };
 
@@ -375,14 +341,11 @@ exports.analyzeResumeAndMatchSkills = async (req, res) => {
 exports.logTelemetry = async (req, res) => {
   try {
     const { interviewId, timestamp, eventType, description } = req.body;
-    console.log(`[Telemetry Log] Session: ${interviewId || 'unknown'}, Event: ${eventType} - ${description} at ${timestamp}`);
-    res.json({
-      success: true,
-      message: 'Telemetry log received statelessly'
-    });
+    const { logEvent } = require('../utils/telemetryLogger');
+    logEvent(interviewId, eventType, description, eventType.includes('Violation') ? 'high' : 'info');
+    sendSuccess(res, null, 200, 'Telemetry log received statelessly');
   } catch (error) {
-    console.error('Telemetry Log Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    handleControllerError(res, error, 'Failed to log telemetry');
   }
 };
 

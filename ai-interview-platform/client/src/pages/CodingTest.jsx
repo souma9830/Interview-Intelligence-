@@ -1,7 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Code2, Terminal, Play, ChevronRight, FileCode, RefreshCw, Mic, MicOff, AlertCircle, Award } from 'lucide-react';
-import Editor from '@monaco-editor/react';
+// Proctoring hook triggers background listeners for window focus checks
+import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useProctor } from '../hooks/useProctor';
+import { LoadingOverlay } from '../components/Common/LoadingOverlay';
+import { MonacoEditorWrapper } from '../components/Common/MonacoEditorWrapper';
+import Modal from '../components/Common/Modal';
 
+// Coding assessment window integrated with live execution telemetry and auto-saving drafts
 const LANGUAGE_BOILERPLATES = {
   javascript: {
     ext: 'js',
@@ -87,6 +93,7 @@ const ROLE_PROBLEMS = {
 };
 
 export default function CodingTest({ globalState, setGlobalState, setCurrentTab }) {
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const selectedRole = globalState.role || 'Frontend Engineer';
   const aiCodingQuestion = globalState.questions?.find(q => q.category === 'coding');
   
@@ -122,33 +129,20 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
     setEvalReport(null);
   }, [selectedRole, language]);
 
-  useEffect(() => {
-    if (!hasStarted || isCheatWarningVisible) return;
+  const handleViolation = useCallback((eventType) => {
+    setIsCheatWarningVisible(true);
+    if (recognitionRef.current) recognitionRef.current.stop();
+    if (window.codingSimInterval) clearInterval(window.codingSimInterval);
+    setIsRecording(false);
+    setGlobalState(prev => ({ ...prev, violationCount: (prev.violationCount || 0) + 1 }));
+  }, []);
 
-    const handleVisibilityChange = () => {
-      if (document.hidden) handleViolation();
-    };
-
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) handleViolation();
-    };
-
-    const handleViolation = () => {
-      setIsCheatWarningVisible(true);
-      if (recognitionRef.current) recognitionRef.current.stop();
-      if (window.codingSimInterval) clearInterval(window.codingSimInterval);
-      setIsRecording(false);
-      setGlobalState(prev => ({ ...prev, violationCount: (prev.violationCount || 0) + 1 }));
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-    };
-  }, [hasStarted, isCheatWarningVisible]);
+  useProctor({
+    interviewId: globalState.interviewId || 'demo_session_active',
+    enabled: hasStarted,
+    cheatWarningVisible: isCheatWarningVisible,
+    onViolation: handleViolation,
+  });
 
   const handleBeginTest = async () => {
     try {
@@ -353,6 +347,7 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
             </p>
             <button
               onClick={handleBeginTest}
+              aria-label="Enter fullscreen and begin coding test"
               style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
               Enter Fullscreen & Begin <ChevronRight size={16} />
@@ -375,7 +370,7 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
       </div>
 
       {/* Primary Grid Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '5fr 7fr', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '5fr 7fr', gap: '20px' }}>
         
         {/* Left Side: Requirements & Explain Logic verbally */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -440,7 +435,7 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
               {/* Language toggler */}
               <div style={{ display: 'flex', background: '#111', border: '1px solid #222', borderRadius: '6px', padding: '2px' }}>
                 {Object.keys(LANGUAGE_BOILERPLATES).map(lang => (
-                  <button key={lang} onClick={() => handleLanguageChange(lang)} style={{ border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '10px', fontFamily: 'monospace', cursor: 'pointer', background: language === lang ? '#1e1e1e' : 'transparent', color: language === lang ? '#fff' : '#555', transition: 'all 0.15s' }}>
+                  <button key={lang} onClick={() => handleLanguageChange(lang)} aria-label={`Switch to ${LANGUAGE_BOILERPLATES[lang].label}`} style={{ border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '10px', fontFamily: 'monospace', cursor: 'pointer', background: language === lang ? '#1e1e1e' : 'transparent', color: language === lang ? '#fff' : '#555', transition: 'all 0.15s' }}>
                     {LANGUAGE_BOILERPLATES[lang].label}
                   </button>
                 ))}
@@ -449,22 +444,10 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
 
             {/* Monaco wrapper */}
             <div style={{ flex: 1, minHeight: 0 }}>
-              <Editor
-                height="100%"
+              <MonacoEditorWrapper
                 language={language}
-                theme="vs-dark"
                 value={code}
                 onChange={v => setCode(v || '')}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                  lineHeight: 20,
-                  padding: { top: 12, bottom: 12 },
-                  scrollBeyondLastLine: false,
-                  cursorBlinking: "smooth",
-                }}
-                loading={<div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontSize: '12px' }}>Initializing Editor…</div>}
               />
             </div>
           </div>
@@ -564,28 +547,26 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
       </div>
 
       {/* Cheat Warning Overlay */}
-      {isCheatWarningVisible && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(10px)' }}>
-          <div style={{ background: '#111', border: '1px solid #ff4444', borderRadius: '16px', padding: '48px', maxWidth: '520px', width: '100%', textAlign: 'center', boxShadow: '0 0 40px rgba(255, 68, 68, 0.1)' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#270e0f', border: '1px solid #ff4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-              <AlertCircle size={28} color="#ff4444" />
-            </div>
-            <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#fff', margin: '0 0 12px' }}>Assessment Integrity Warning</h2>
-            <p style={{ fontSize: '15px', color: '#aaa', lineHeight: '1.6', margin: '0 0 32px' }}>
-              You have exited fullscreen mode or switched tabs during the coding assessment. This violation has been logged and will negatively impact your technical score.
-            </p>
-            <button
-              onClick={async () => {
-                try { await document.documentElement.requestFullscreen(); } catch (err) {}
-                setIsCheatWarningVisible(false);
-              }}
-              style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-            >
-              Resume Coding Test <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={isCheatWarningVisible}
+        title="Assessment Integrity Warning"
+        description="You have exited fullscreen mode or switched tabs during the coding assessment. This violation has been logged and will negatively impact your technical score."
+        variant="danger"
+        icon={<AlertCircle size={28} color="#ff4444" />}
+        iconBg="#270e0f"
+        iconBorder="#ff4444"
+        footer={
+          <button
+            onClick={async () => {
+              try { await document.documentElement.requestFullscreen(); } catch (err) {}
+              setIsCheatWarningVisible(false);
+            }}
+            style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            Resume Coding Test <ChevronRight size={16} />
+          </button>
+        }
+      />
 
     </div>
   );

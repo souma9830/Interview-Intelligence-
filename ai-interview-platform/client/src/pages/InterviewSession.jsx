@@ -1,18 +1,39 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Video, Camera, Play, AlertTriangle } from 'lucide-react';
 import VideoRecorder from '../components/Telemetry/VideoRecorder';
 import { getAuthHeader } from '../utils/authHeaders';
-
+import { useProctor } from '../hooks/useProctor';
+import { useProctorOffline } from '../hooks/useProctorOffline';
 
 export default function InterviewSession({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
   const interviewId = globalState.interviewId || 'demo_session_active';
+  const { isOnline } = useProctorOffline();
 
   // Redirect if no resume uploaded
   useEffect(() => {
-    if (!globalState.resumeUploaded) {
-      setCurrentTab('setup');
-    }
+    const verifyAccess = async () => {
+      if (!globalState.resumeUploaded) {
+        const token = localStorage.getItem('camsense_token');
+        if (token) {
+          try {
+            const res = await fetch('/api/resume/status', { headers: { Authorization: `Bearer ${token}` } });
+            const json = await res.json();
+            if (!json.success || !json.data?.hasResume) {
+              setCurrentTab('setup');
+              return;
+            }
+          } catch {
+            setCurrentTab('setup');
+            return;
+          }
+        } else {
+          setCurrentTab('setup');
+          return;
+        }
+      }
+    };
+    verifyAccess();
   }, [globalState.resumeUploaded, setCurrentTab]);
 
   // Initialize telemetry logs
@@ -56,6 +77,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   const streamRef = useRef(null);
   const videoRef = useRef(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const [cameraInitialized, setCameraInitialized] = useState(false);
   const recognitionRef = useRef(null);
 
   const [timeLeft, setTimeLeft] = useState(60);
@@ -78,15 +100,22 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   }, [timerActive, timeLeft]);
 
   const startCamera = async () => {
+    if (cameraInitialized) return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: 'user' },
+        audio: { echoCancellation: true, noiseSuppression: true }
+      });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        setCameraActive(true);
       }
-    } catch {
+      setCameraActive(true);
+      setCameraInitialized(true);
+    } catch (err) {
+      console.warn('[Camera] Init failed:', err.message);
       setCameraActive(false);
+      setCameraInitialized(true);
     }
   };
 
@@ -94,47 +123,38 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
-      }
-      if (videoRef.current && videoRef.current.srcObject) {
-        videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
       }
     };
   }, []);
 
   useEffect(() => {
-    if (!hasStarted || isCheatWarningVisible) return;
+    if (hasStarted && !cameraInitialized) {
+      startCamera();
+    }
+  }, [hasStarted, cameraInitialized]);
 
-    const handleVisibilityChange = () => {
-      if (document.hidden) handleViolation();
-    };
+  const handleViolation = useCallback(() => {
+    setIsCheatWarningVisible(true);
+    if (window.speechSynthesis) window.speechSynthesis.pause();
+    if (recognitionRef.current) recognitionRef.current.stop();
+    if (window.simInterval) clearInterval(window.simInterval);
+    setIsRecording(false);
+    setTimerActive(false);
+    const timestamp = new Date().toLocaleTimeString();
+    setGlobalState(prev => ({
+      ...prev,
+      violationCount: (prev.violationCount || 0) + 1,
+      telemetryLogs: [...(prev.telemetryLogs || []), { time: timestamp, event: 'Fullscreen exited / tab switched (Violation)' }]
+    }));
+  }, []);
 
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) handleViolation();
-    };
-
-    const handleViolation = () => {
-      setIsCheatWarningVisible(true);
-      if (window.speechSynthesis) window.speechSynthesis.pause();
-      if (recognitionRef.current) recognitionRef.current.stop();
-      if (window.simInterval) clearInterval(window.simInterval);
-      setIsRecording(false);
-      setTimerActive(false);
-      const timestamp = new Date().toLocaleTimeString();
-      setGlobalState(prev => ({
-        ...prev,
-        violationCount: (prev.violationCount || 0) + 1,
-        telemetryLogs: [...(prev.telemetryLogs || []), { time: timestamp, event: 'Fullscreen exited / tab switched (Violation)' }]
-      }));
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-    };
-  }, [hasStarted, isCheatWarningVisible]);
+  useProctor({
+    interviewId,
+    enabled: hasStarted,
+    cheatWarningVisible: isCheatWarningVisible,
+    onViolation: handleViolation,
+  });
 
   const handleBeginSession = async () => {
     try {
@@ -335,23 +355,26 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     <div style={{ fontFamily: "'Inter', sans-serif", color: '#e8e8e8', position: 'relative' }}>
 
       {/* Start Overlay */}
-      {!hasStarted && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.92)', borderRadius: '16px', backdropFilter: 'blur(8px)' }}>
-          <div style={{ background: '#111', border: '1px solid #2a2a2a', borderRadius: '16px', padding: '48px', maxWidth: '520px', width: '100%', textAlign: 'center' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-              <Play size={28} color="#fff" />
-            </div>
-            <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#fff', margin: '0 0 12px' }}>Ready for your interview?</h2>
-            <p style={{ fontSize: '15px', color: '#888', lineHeight: '1.6', margin: '0 0 32px' }}>
-              Your webcam and microphone are ready. The AI interviewer will ask you questions based on your profile. Answer each one to proceed.
-            </p>
-            <button
-              onClick={handleBeginSession}
-              style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-            >
-              Begin Session <ChevronRight size={16} />
-            </button>
-          </div>
+      <Modal
+        open={!hasStarted}
+        title="Ready for your interview?"
+        description="Your webcam and microphone are ready. The AI interviewer will ask you questions based on your profile. Answer each one to proceed."
+        icon={<Play size={28} color="#fff" />}
+        width="520px"
+        footer={
+          <button
+            onClick={handleBeginSession}
+            style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            Begin Session <ChevronRight size={16} />
+          </button>
+        }
+      />
+
+      {!isOnline && (
+        <div style={{ background: '#ef4444', color: '#fff', padding: '10px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '13px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }} role="alert">
+          <AlertTriangle size={16} />
+          <span>You are currently offline. Proctor telemetry violations will be saved locally and synchronized once your connection is restored.</span>
         </div>
       )}
 
@@ -430,7 +453,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
                 <span style={{ fontSize: '11px', fontWeight: '600', color: '#ccc', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '4px', padding: '3px 8px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                   {questions[currentIdx]?.category || 'technical'}
                 </span>
-                <button onClick={speakQuestion} style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Read aloud">
+                <button onClick={speakQuestion} aria-label="Read question aloud" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Read aloud">
                   <Volume2 size={13} color="#ccc" />
                 </button>
               </div>
@@ -440,15 +463,24 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
             </div>
 
             {/* Timer */}
-            <div style={{ flexShrink: 0, position: 'relative', width: '68px', height: '68px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg style={{ position: 'absolute', width: '68px', height: '68px', transform: 'rotate(-90deg)' }}>
+            <div style={{ flexShrink: 0, position: 'relative', width: '68px', height: '68px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} role="timer" aria-label={`${timeLeft} seconds remaining for this question`}>
+              <svg style={{ position: 'absolute', width: '68px', height: '68px', transform: 'rotate(-90deg)' }} aria-hidden="true">
                 <circle cx="34" cy="34" r="30" stroke="#222" strokeWidth="3" fill="none" />
-                <circle cx="34" cy="34" r="30" stroke={timeLeft <= 10 ? '#ef4444' : '#fff'} strokeWidth="3" fill="none"
+                <circle cx="34" cy="34" r="30" stroke={timeLeft <= 5 ? '#ef4444' : timeLeft <= 15 ? '#f59e0b' : '#fff'} strokeWidth="3" fill="none"
                   strokeDasharray="188.5" strokeDashoffset={188.5 - (188.5 * timeLeft) / 60}
-                  style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.3s' }} />
+                  style={{ 
+                    transition: 'stroke-dashoffset 1s linear, stroke 0.3s',
+                    animation: timeLeft <= 15 ? 'pulse 1s infinite alternate' : 'none'
+                  }} />
               </svg>
               <div style={{ textAlign: 'center', zIndex: 1 }}>
-                <div style={{ fontSize: '16px', fontWeight: '600', color: timeLeft <= 10 ? '#ef4444' : '#e8e8e8', lineHeight: 1 }}>{timeLeft}s</div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  fontWeight: '600', 
+                  color: timeLeft <= 5 ? '#ef4444' : timeLeft <= 15 ? '#f59e0b' : '#e8e8e8', 
+                  lineHeight: 1,
+                  animation: timeLeft <= 15 ? 'pulse 1s infinite alternate' : 'none'
+                }}>{timeLeft}s</div>
                 <div style={{ fontSize: '9px', color: '#aaa', letterSpacing: '0.05em', marginTop: '2px' }}>TIME</div>
               </div>
             </div>
@@ -528,30 +560,28 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
       `}</style>
 
       {/* Cheat Warning Overlay */}
-      {isCheatWarningVisible && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(10px)' }}>
-          <div style={{ background: '#111', border: '1px solid #ff4444', borderRadius: '16px', padding: '48px', maxWidth: '520px', width: '100%', textAlign: 'center', boxShadow: '0 0 40px rgba(255, 68, 68, 0.1)' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#270e0f', border: '1px solid #ff4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-              <AlertTriangle size={28} color="#ff4444" />
-            </div>
-            <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#fff', margin: '0 0 12px' }}>Suspicious Activity Detected</h2>
-            <p style={{ fontSize: '15px', color: '#aaa', lineHeight: '1.6', margin: '0 0 32px' }}>
-              You have exited fullscreen mode or switched tabs. This activity has been recorded and will negatively impact your final evaluation score. Please remain focused on the session.
-            </p>
-            <button
-              onClick={async () => {
-                try { await document.documentElement.requestFullscreen(); } catch (err) {}
-                setIsCheatWarningVisible(false);
-                if (window.speechSynthesis) window.speechSynthesis.resume();
-                setTimerActive(true);
-              }}
-              style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-            >
-              Resume Session <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={isCheatWarningVisible}
+        title="Suspicious Activity Detected"
+        description="You have exited fullscreen mode or switched tabs. This activity has been recorded and will negatively impact your final evaluation score. Please remain focused on the session."
+        variant="danger"
+        icon={<AlertTriangle size={28} color="#ff4444" />}
+        iconBg="#270e0f"
+        iconBorder="#ff4444"
+        footer={
+          <button
+            onClick={async () => {
+              try { await document.documentElement.requestFullscreen(); } catch (err) {}
+              setIsCheatWarningVisible(false);
+              if (window.speechSynthesis) window.speechSynthesis.resume();
+              setTimerActive(true);
+            }}
+            style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            Resume Session <ChevronRight size={16} />
+          </button>
+        }
+      />
     </div>
   );
 }

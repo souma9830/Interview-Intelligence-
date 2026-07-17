@@ -1,42 +1,78 @@
-# 🐛 Bug Report
+---
+name: Issue Report
+about: Create a report to help us improve Interview Intelligence
+title: ''
+labels: ''
+assignees: ''
+---
 
 ## Description
-A clear and concise description of what the bug is.
+A clear and concise description of the issue.
 
 ### Program Compliance Tracking
 - [ ] This issue is submitted as part of **ELUSoC 2026**
 - [ ] I have verified this is not a duplicate issue
 
-## Steps to Reproduce
+---
+
+## 🐛 Bug Report
+
+### Steps to Reproduce
 1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
+2. Click on '...'
+3. Scroll down to '...'
 4. See error
 
-## Expected Behavior
-A clear and concise description of what you expected to happen.
+### Expected Behavior
+What you expected to happen.
 
-## Environment & Logs
-- OS / Browser version:
-- Node.js version:
-- Console stack traces or Server logs:
-```text
-(Paste logs here)
+### Actual Behavior
+What actually happened.
+
+### Environment
+- OS: [e.g. Windows 11, macOS 14]
+- Browser: [e.g. Chrome 120, Firefox 121]
+- Node.js version: [e.g. 18.15, 20.10]
+
+### Logs
+```
+Paste any relevant console errors, server logs, or network responses here.
 ```
 
-## Additional Context
-Add any other context or screenshots about the problem here.
+### Screenshots
+If applicable, add screenshots to help explain the problem.
+
 ---
-# ✨ Feature Request
 
-## Is your feature request related to a problem?
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+## ✨ Feature Request
 
-## Describe the solution you'd like
-A clear and concise description of what you want to happen.
+### Problem Statement
+A clear description of what problem this feature would solve.
 
-## Describe alternatives you've considered
-A clear and concise description of any alternative solutions or features you've considered.
+### Proposed Solution
+What you'd like to see implemented.
 
-## Additional Context
-Add any other context, mockup drawings, or screenshots about the feature request here.
+### Alternatives Considered
+Any alternative solutions or workarounds you've considered.
+
+### Additional Context
+Any mockups, diagrams, or references that help explain the request.
+
+---
+
+## 🔧 Technical Improvement
+
+### Area
+- [ ] Performance
+- [ ] Security
+- [ ] Accessibility
+- [ ] Code Quality
+- [ ] Documentation
+- [ ] Developer Experience
+- [ ] Testing
+
+### Description
+What needs improvement and why it matters.
+
+### Suggested Approach
+How you think it should be implemented.

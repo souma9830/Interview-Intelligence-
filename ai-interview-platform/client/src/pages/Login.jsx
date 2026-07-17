@@ -1,31 +1,181 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
-// Firebase authentication controller interface with local CamSense session sync.
 import { auth, googleProvider } from '../firebase';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { sendPasswordReset } from '../services/auth';
+import { useToast } from '../components/Common/ToastProvider';
+import { useFormValidation, validators, createField } from '../hooks/useFormValidation';
+import { announceToScreenReader, getAriaInvalid, getErrorId } from '../utils/accessibility';
 
-const inp = (err) => ({ width: '100%', background: '#0d0d0d', border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`, borderRadius: '8px', padding: '10px 12px 10px 38px', fontSize: '14px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box', transition: 'border-color 0.15s' });
+// Consumer of password strength indicators in related authentication pages
+const card = {
+  background: '#111',
+  border: '1px solid #1e1e1e',
+  borderRadius: '12px',
+  padding: '32px',
+};
+
+const inp = (err) => ({
+  width: '100%',
+  background: '#0d0d0d',
+  border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`,
+  borderRadius: '8px',
+  padding: '10px 12px 10px 38px',
+  fontSize: '14px',
+  color: '#e0e0e0',
+  outline: 'none',
+  fontFamily: 'Inter, sans-serif',
+  boxSizing: 'border-box',
+  transition: 'border-color 0.15s',
+});
+
+const inputGroup = {
+  position: 'relative',
+};
+
+const iconPosition = {
+  position: 'absolute',
+  left: '11px',
+  top: '11px',
+};
+
+const label = {
+  fontSize: '12px',
+  fontWeight: '500',
+  color: '#888',
+  display: 'block',
+  marginBottom: '6px',
+};
+
+const btnPrimary = (loading, disabled) => ({
+  width: '100%',
+  padding: '11px',
+  background: loading || disabled ? '#1a1a1a' : '#fff',
+  color: loading || disabled ? '#555' : '#000',
+  border: 'none',
+  borderRadius: '8px',
+  fontSize: '14px',
+  fontWeight: '600',
+  cursor: loading || disabled ? 'not-allowed' : 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+  transition: 'all 0.15s',
+});
+
+const divider = {
+  display: 'flex',
+  alignItems: 'center',
+  margin: '4px 0',
+};
+
+const dividerLine = {
+  flex: 1,
+  height: '1px',
+  background: '#222',
+};
+
+const dividerText = {
+  margin: '0 12px',
+  fontSize: '12px',
+  color: '#666',
+  fontWeight: '500',
+};
+
+const authPageContainer = {
+  width: '100%',
+  maxWidth: '400px',
+  padding: '0 16px',
+  fontFamily: 'Inter, sans-serif',
+};
+
+const authHeader = {
+  fontSize: '20px',
+  fontWeight: '600',
+  color: '#fff',
+  margin: '0 0 4px',
+};
+
+const authSubtext = {
+  fontSize: '13px',
+  color: '#666',
+  margin: '0 0 24px',
+};
+
+const googleBtn = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+  width: '100%',
+  padding: '11px',
+  background: 'transparent',
+  color: '#fff',
+  border: '1px solid #333',
+  borderRadius: '8px',
+  fontSize: '14px',
+  fontWeight: '500',
+  cursor: 'pointer',
+  transition: 'all 0.15s',
+};
+
+const showPasswordBtn = {
+  position: 'absolute',
+  right: '10px',
+  top: '9px',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  color: '#555',
+  padding: '2px',
+};
+
+const inputError = {
+  fontSize: '12px',
+  color: '#ef4444',
+  margin: '4px 0 0',
+};
+
+const toggleLink = {
+  background: 'none',
+  border: 'none',
+  color: '#aaa',
+  fontWeight: '500',
+  cursor: 'pointer',
+  textDecoration: 'underline',
+  fontSize: '13px',
+};
+
+const spinnerStyle = {
+  animation: 'spin 1s linear infinite',
+};
+
+const toastContainer = (type) => ({
+  position: 'fixed',
+  top: '20px',
+  right: '20px',
+  padding: '12px 20px',
+  borderRadius: '8px',
+  background: type === 'err' ? '#ef4444' : '#22c55e',
+  color: '#fff',
+  fontSize: '14px',
+  zIndex: 1000,
+});
 
 export default function Login({ setToken, setUser, setCurrentTab }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState(null);
-  const [errors, setErrors] = useState({});
+  const toast = useToast();
 
-  const showToast = (msg, type = 'ok') => { setToast({ msg, type }); setTimeout(() => setToast(null), 4000); };
+  const fields = useMemo(() => [
+    createField('email', email, [validators.required, validators.email], 'Email'),
+    createField('password', password, [validators.password]),
+  ], [email, password]);
 
-  const validate = () => {
-    const e = {};
-    if (!email) e.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) e.email = 'Enter a valid email';
-    if (!password) e.password = 'Password is required';
-    else if (password.length < 6) e.password = 'At least 6 characters';
-    setErrors(e);
-    return !Object.keys(e).length;
-  };
+  const { errors, validate, clearError } = useFormValidation(fields);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,6 +192,40 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       }, 1200);
     } catch (err) { 
       showToast('Authentication failed. Check connection.', 'err');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const fbUser = userCredential.user;
+      const token = await fbUser.getIdToken();
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: fbUser.displayName })
+        });
+      } catch {}
+
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: fbUser.displayName || email.split('@')[0], email: fbUser.email, firebaseUid: fbUser.uid })
+        });
+      } catch (syncErr) {
+        console.warn('[Login] MongoDB sync deferred:', syncErr.message);
+      }
+
+      toast.show('Signed in successfully!', 'success');
+      setTimeout(() => {
+        localStorage.setItem('camsense_token', token);
+        setToken(token);
+        setUser({ uid: fbUser.uid, name: fbUser.displayName || email.split('@')[0], email: fbUser.email });
+        setCurrentTab('home');
+      }, 1200);
+    } catch (err) {
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        toast.show('Invalid email or password', 'error');
+      } else {
+        toast.show('Authentication failed. Check connection.', 'error');
+      }
     }
     finally { setTimeout(() => setLoading(false), 1200); }
   };
@@ -51,73 +235,86 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: fbUser.displayName })
+        });
+      } catch {}
 
-      showToast('Signed in with Google!');
-      setTimeout(() => { 
-        localStorage.setItem('camsense_token', token); 
-        setToken(token); 
-        setUser({ uid: fbUser.uid, name: fbUser.displayName, email: fbUser.email }); 
-        setCurrentTab('home'); 
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: fbUser.displayName, email: fbUser.email, firebaseUid: fbUser.uid })
+        });
+      } catch (syncErr) {
+        console.warn('[Login] MongoDB sync deferred:', syncErr.message);
+      }
+
+      toast.show('Signed in with Google!', 'success');
+      setTimeout(() => {
+        localStorage.setItem('camsense_token', token);
+        setToken(token);
+        setUser({ uid: fbUser.uid, name: fbUser.displayName, email: fbUser.email });
+        setCurrentTab('home');
       }, 1200);
     } catch (err) {
-      showToast('Google sign-in was cancelled or failed.', 'err');
+      toast.show('Google sign-in was cancelled or failed.', 'error');
     }
   };
 
-
-
   return (
-    <div style={{ width: '100%', maxWidth: '400px', padding: '0 16px', fontFamily: 'Inter, sans-serif' }}>
-      {toast && (
-        <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 100, background: toast.type === 'ok' ? '#14532d' : '#7f1d1d', border: `1px solid ${toast.type === 'ok' ? '#22c55e' : '#ef4444'}`, color: '#fff', padding: '10px 16px', borderRadius: '8px', fontSize: '13px' }}>
-          {toast.msg}
-        </div>
-      )}
-
-      <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '32px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#fff', margin: '0 0 4px' }}>Sign in</h2>
-        <p style={{ fontSize: '13px', color: '#666', margin: '0 0 24px' }}>
-          Enter your credentials to access the platform.
-        </p>
+    <div style={authPageContainer}>
+      <div style={card}>
+        <h2 style={authHeader}>Sign in</h2>
+        <p style={authSubtext}>Enter your credentials to access the platform.</p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>Email address</label>
-            <div style={{ position: 'relative' }}>
-              <Mail size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} />
-              <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); setErrors(p => ({ ...p, email: '' })); }} style={inp(errors.email)} />
+            <label htmlFor="login-email" style={label}>Email address</label>
+            <div style={inputGroup}>
+              <Mail size={15} color="#555" style={iconPosition} aria-hidden="true" />
+              <input id="login-email" type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); clearError('email'); }} style={inp(errors.email)} aria-invalid={getAriaInvalid(errors.email)} aria-describedby={errors.email ? getErrorId('email') : undefined} />
             </div>
-            {errors.email && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{errors.email}</p>}
+            {errors.email && <p id={getErrorId('email')} style={inputError} role="alert">{errors.email}</p>}
           </div>
 
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block' }}>Password</label>
-              <button type="button" onClick={() => setCurrentTab('forgot-password')} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
+              <label htmlFor="login-password" style={label}>Password</label>
+              <button
+                id="forgot-password-link"
+                type="button"
+                aria-label="Forgot password? Reset via OTP"
+                onClick={() => setCurrentTab('forgot-password')}
+                style={toggleLink}
+              >
                 Forgot password?
               </button>
             </div>
-            <div style={{ position: 'relative' }}>
-              <Lock size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} />
-              <input type={show ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); setErrors(p => ({ ...p, password: '' })); }} style={{ ...inp(errors.password), paddingRight: '38px' }} />
-              <button type="button" onClick={() => setShow(!show)} style={{ position: 'absolute', right: '10px', top: '9px', background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '2px' }}>
-                {show ? <EyeOff size={15} /> : <Eye size={15} />}
+            <div style={inputGroup}>
+              <Lock size={15} color="#555" style={iconPosition} aria-hidden="true" />
+              <input id="login-password" type={show ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); clearError('password'); }} style={{ ...inp(errors.password), paddingRight: '38px' }} aria-invalid={getAriaInvalid(errors.password)} aria-describedby={errors.password ? getErrorId('password') : undefined} />
+              <button type="button" onClick={() => setShow(!show)} style={showPasswordBtn} aria-label={show ? 'Hide password' : 'Show password'}>
+                {show ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
               </button>
             </div>
-            {errors.password && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{errors.password}</p>}
+            {errors.password && <p id={getErrorId('password')} style={inputError} role="alert">{errors.password}</p>}
           </div>
 
-          <button type="submit" disabled={loading} style={{ marginTop: '8px', width: '100%', padding: '11px', background: loading ? '#1a1a1a' : '#fff', color: loading ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.15s' }}>
-            {loading ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Signing in…</> : <>Sign in <ArrowRight size={15} /></>}
+          <button type="submit" disabled={loading} className="btn-primary" style={btnPrimary(loading, false)}>
+            {loading ? <><Loader2 size={15} style={spinnerStyle} /> Signing in…</> : <>Sign in <ArrowRight size={15} /></>}
           </button>
-          
-          <div style={{ display: 'flex', alignItems: 'center', margin: '4px 0' }}>
-            <div style={{ flex: 1, height: '1px', background: '#222' }} />
-            <span style={{ margin: '0 12px', fontSize: '12px', color: '#666', fontWeight: '500' }}>OR</span>
-            <div style={{ flex: 1, height: '1px', background: '#222' }} />
+
+          <div style={divider}>
+            <div style={dividerLine} />
+            <span style={dividerText}>OR</span>
+            <div style={dividerLine} />
           </div>
 
-          <button type="button" onClick={handleGoogleLogin} style={{ width: '100%', padding: '11px', background: 'transparent', color: '#fff', border: '1px solid #333', borderRadius: '8px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.15s' }}>
+          <button type="button" onClick={handleGoogleLogin} className="btn-google" style={googleBtn}>
             <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -130,12 +327,11 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
 
         <p style={{ textAlign: 'center', fontSize: '13px', color: '#555', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #1e1e1e' }}>
           New here?{' '}
-          <button onClick={() => setCurrentTab('signup')} style={{ background: 'none', border: 'none', color: '#aaa', fontWeight: '500', cursor: 'pointer', textDecoration: 'underline', fontSize: '13px' }}>
+          <button onClick={() => setCurrentTab('signup')} style={toggleLink}>
             Create an account
           </button>
         </p>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
+      </div>
   );
 }

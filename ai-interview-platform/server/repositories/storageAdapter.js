@@ -14,6 +14,8 @@ class StorageAdapter {
   async getResume(userId) { throw new Error('Not implemented'); }
   async saveSchedule(schedule) { throw new Error('Not implemented'); }
   async listSchedules(userId) { throw new Error('Not implemented'); }
+  async getSchedule(id) { throw new Error('Not implemented'); }
+  async deleteSchedule(id) { throw new Error('Not implemented'); }
 }
 
 let activeAdapter = null;
@@ -21,10 +23,11 @@ let activeAdapter = null;
 function getStorageAdapter() {
   if (activeAdapter) return activeAdapter;
 
-  const mode = process.env.STORAGE_MODE || 'file'; // Default to file persistence for DX
+  const mode = process.env.STORAGE_PROVIDER || process.env.STORAGE_MODE || 'file';
+  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
   console.log(`[Storage Factory] Initializing storage in '${mode}' mode.`);
 
-  if (mode === 'mongodb' && process.env.MONGO_URI) {
+  if (mode === 'mongodb' && mongoUri) {
     const MongoStorage = require('./mongoStorage');
     activeAdapter = new MongoStorage();
   } else if (mode === 'memory') {

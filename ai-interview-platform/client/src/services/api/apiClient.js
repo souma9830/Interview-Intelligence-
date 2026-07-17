@@ -23,4 +23,14 @@ API.interceptors.request.use(
   }
 );
 
+export const startSession = async (params, signal) => {
+  const response = await API.post('/interview/session/start', params, { signal });
+  return response.data;
+};
+
+export const submitAnswer = async (answerData, signal) => {
+  const response = await API.post('/interview/session/answer', answerData, { signal });
+  return response.data;
+};
+
 export default API;

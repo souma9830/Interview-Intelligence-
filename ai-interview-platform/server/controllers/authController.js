@@ -1,9 +1,17 @@
 const { ApiError } = require('../middleware/error/errorHandler');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
-const sendEmail = require('../services/notificationService');
+const RefreshToken = require('../models/RefreshToken');
+const notificationService = require('../services/notificationService');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const admin = require('firebase-admin');
+const { sendSuccess, sendError, handleControllerError } = require('../utils/apiResponse');
+const { validateEmail, validateOTP, validatePasswordStrength } = require('../utils/authValidation');
+const axios = require('axios');
 
+// Authentication Controller
+// Endpoints are protected by express-rate-limit bounds to prevent SMTP resource exhaustion.
 
 // @desc    Get current user details statelessly
 // @route   GET /api/auth/me
@@ -11,16 +19,12 @@ const crypto = require('crypto');
 exports.getMe = async (req, res, next) => {
   try {
     if (!req.user) {
-      throw new ApiError(401, 'User context not found in stateless request session');
+      return sendError(res, 'User context not found in stateless request session', 401);
     }
     // Return the user mapped statelessly from the decoded Firebase token in authMiddleware
-    res.json({
-      success: true,
-      data: req.user
-    });
+    return sendSuccess(res, req.user);
   } catch (error) {
-    console.error('Get Me Error:', error.message);
-    next(error);
+    handleControllerError(res, error, 'Failed to get user');
   }
 };
 
@@ -29,13 +33,9 @@ exports.getMe = async (req, res, next) => {
 // @access  Private
 exports.logout = async (req, res, next) => {
   try {
-    res.json({
-      success: true,
-      message: 'Logged out successfully'
-    });
+    return sendSuccess(res, null, 200, 'Logged out successfully');
   } catch (error) {
-    console.error('Logout Error:', error.message);
-    next(error);
+    handleControllerError(res, error, 'Failed to logout');
   }
 };
 
@@ -44,39 +44,46 @@ exports.logout = async (req, res, next) => {
 // @access  Public
 exports.forgotPassword = async (req, res, next) => {
   try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
+    const { email: rawEmail } = req.body;
+    const email = (rawEmail || '').toLowerCase().trim();
 
-    if (!user) {
-      return next(new ApiError(404, 'There is no user with that email'));
+    if (!validateEmail(email)) {
+      return sendError(res, 'Please provide a valid email address', 400);
     }
 
-    // Generate 6-digit OTP
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      return sendError(res, 'No account found with this email address', 404);
+    }
+
     const otp = crypto.randomInt(100000, 999999).toString();
 
-    // Save OTP to DB
+    await OTP.deleteMany({ email });
     await OTP.create({
       email,
       otp
     });
 
-    // Send email
-    const message = `Your password reset OTP is ${otp}. It is valid for 5 minutes.`;
-
     try {
-      await sendEmail({
-        email: user.email,
-        subject: 'Password Reset OTP',
-        message
+      const result = await notificationService.send({
+        to: user.email,
+        subject: 'Password Reset OTP - CamSense AI',
+        message: `Your password reset OTP is ${otp}. It is valid for 5 minutes. Do not share this code with anyone.`
       });
 
-      res.status(200).json({ success: true, data: 'Email sent' });
+      if (!result || !result.success) {
+        await OTP.deleteMany({ email });
+        return sendError(res, 'Failed to send OTP email. Please try again later.', 500);
+      }
+
+      sendSuccess(res, { email: user.email }, 200, 'OTP sent successfully to your registered email');
     } catch (err) {
       await OTP.deleteMany({ email });
-      return next(new ApiError(500, 'Email could not be sent'));
+      return sendError(res, 'Email service unavailable. Please try again later.', 500);
     }
   } catch (error) {
-    next(error);
+    handleControllerError(res, error, 'Failed to process forgot password');
   }
 };
 
@@ -85,31 +92,181 @@ exports.forgotPassword = async (req, res, next) => {
 // @access  Public
 exports.verifyOTP = async (req, res, next) => {
   try {
-    const { email, otp, newPassword } = req.body;
+    const { email: rawEmail, otp, newPassword } = req.body;
+    const email = (rawEmail || '').toLowerCase().trim();
+
+    if (!validateEmail(email)) {
+      return sendError(res, 'Please provide a valid email address', 400);
+    }
+
+    if (!validateOTP(otp)) {
+      return sendError(res, 'OTP must be exactly 6 numeric digits', 400);
+    }
+
+    const passwordCheck = validatePasswordStrength(newPassword);
+    if (!passwordCheck.valid) {
+      return sendError(res, passwordCheck.message, 400);
+    }
 
     const otpRecord = await OTP.findOne({ email, otp });
 
     if (!otpRecord) {
-      return next(new ApiError(400, 'Invalid or expired OTP'));
+      return sendError(res, 'Invalid or expired OTP', 400);
     }
 
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email }).select('+password');
     if (!user) {
-      return next(new ApiError(404, 'User not found'));
+      try {
+        const fbUser = await admin.auth().getUserByEmail(email);
+        if (fbUser) {
+          user = await User.create({
+            name: fbUser.displayName || email.split('@')[0],
+            email: fbUser.email,
+            password: newPassword,
+            firebaseUid: fbUser.uid
+          });
+        }
+      } catch (fbErr) {
+        return sendError(res, 'User not found', 404);
+      }
+    } else {
+      user.password = newPassword;
+      await user.save();
     }
 
     user.password = newPassword;
     await user.save();
 
-    await OTP.deleteMany({ email }); // Delete OTPs for this email after success
+    try {
+      const fbUser = await admin.auth().getUserByEmail(email);
+      if (fbUser) {
+        await admin.auth().updateUser(fbUser.uid, { password: newPassword });
+        console.log(`[Firebase Auth] Password updated for: ${email}`);
+      }
+    } catch (fbErr) {
+      console.warn(`[Firebase Auth] Could not sync password: ${fbErr.message}`);
+    }
 
-    res.status(200).json({
-      success: true,
-      message: 'Password reset successful',
-    });
+    await OTP.deleteMany({ email });
+
+    sendSuccess(res, null, 200, 'Password reset successful');
   } catch (error) {
-    next(error);
+    handleControllerError(res, error, 'Failed to verify OTP');
   }
 };
 
-// Added security events auditing
+// @desc    Sync Firebase user to MongoDB
+// @route   POST /api/auth/sync-user
+// @access  Public
+exports.syncUser = async (req, res, next) => {
+  try {
+    const { syncFirebaseUserToMongoDB } = require('../middleware/authMiddleware');
+    const { uid, email, name } = req.body;
+
+    if (!uid && !email) {
+      return sendError(res, 'Please provide uid or email', 400);
+    }
+
+    const firebaseUser = { uid, email: (email || '').toLowerCase().trim(), name };
+    const user = await syncFirebaseUserToMongoDB(firebaseUser);
+
+    if (user) {
+      return sendSuccess(res, { id: user._id, email: user.email, name: user.name }, 200, 'User synced successfully');
+    }
+  } catch (error) {
+    handleControllerError(res, error, 'Failed to sync user');
+  }
+};
+
+// @desc    Resend OTP for password reset
+// @route   POST /api/auth/resend-otp
+// @access  Public
+exports.resendOTP = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!validateEmail(email)) {
+      return sendError(res, 'Please provide a valid email address', 400);
+    }
+
+    const recentCount = await OTP.countDocuments({
+      email,
+      createdAt: { $gt: new Date(Date.now() - 10 * 60 * 1000) }
+    });
+
+    if (recentCount >= 5) {
+      return sendError(res, 'Too many OTP requests. Please try again after 10 minutes.', 429);
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return sendError(res, 'No account found with this email address', 404);
+    }
+
+    await OTP.deleteMany({ email });
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+    await OTP.create({ email, otp });
+
+    try {
+      const result = await notificationService.send({
+        to: user.email,
+        subject: 'Password Reset OTP - CamSense AI',
+        message: `Your new password reset OTP is ${otp}. It is valid for 5 minutes. Do not share this code with anyone.`
+      });
+
+      if (!result || !result.success) {
+        await OTP.deleteMany({ email });
+        return sendError(res, 'Failed to send OTP email. Please try again later.', 500);
+      }
+
+      sendSuccess(res, { email: user.email }, 200, 'New OTP sent successfully');
+    } catch (err) {
+      await OTP.deleteMany({ email });
+      return sendError(res, 'Email service unavailable. Please try again later.', 500);
+    }
+  } catch (error) {
+    handleControllerError(res, error, 'Failed to resend OTP');
+  }
+};
+
+// @desc    Refresh access token using rotate-on-consume refresh token
+// @route   POST /api/auth/refresh
+// @access  Public
+exports.refreshToken = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return sendError(res, 'Refresh token is required', 400);
+    }
+
+    const activeToken = await RefreshToken.findOne({ token, revoked: false });
+    if (!activeToken || activeToken.expiresAt < new Date()) {
+      return sendError(res, 'Invalid or expired refresh token', 403);
+    }
+
+    // Mark current refresh token as revoked (rotation)
+    activeToken.revoked = true;
+    await activeToken.save();
+
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return sendError(res, 'JWT_SECRET environment variable is not configured', 500);
+    }
+    const newAccessToken = jwt.sign({ id: activeToken.userId }, jwtSecret, { expiresIn: '15m' });
+    const newRefreshTokenString = crypto.randomBytes(40).toString('hex');
+    
+    await RefreshToken.create({
+      userId: activeToken.userId,
+      token: newRefreshTokenString,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    });
+
+    sendSuccess(res, {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshTokenString
+    }, 200, 'Token refreshed successfully');
+  } catch (error) {
+    handleControllerError(res, error, 'Failed to refresh token');
+  }
+};

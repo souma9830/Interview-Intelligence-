@@ -49,4 +49,8 @@ const InterviewSchema = new mongoose.Schema({
   },
 });
 
+InterviewSchema.index({ user: 1, status: 1, createdAt: -1 });
+InterviewSchema.index({ difficulty: 1, status: 1 });
+InterviewSchema.index({ 'questions.category': 1 });
+
 module.exports = mongoose.model('Interview', InterviewSchema);
