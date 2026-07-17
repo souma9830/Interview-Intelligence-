@@ -5,6 +5,8 @@ const createTransporter = () => {
   const smtpPort = parseInt(process.env.SMTP_PORT, 10) || 2525;
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
+  // Use secure TLS on port 465 (Gmail/SendGrid production); STARTTLS on 587
+  const useSecure = smtpPort === 465;
 
   if (!smtpUser || !smtpPass) {
     console.warn('[SMTP] Missing SMTP credentials. Emails will not be delivered.');
@@ -13,9 +15,14 @@ const createTransporter = () => {
   return nodemailer.createTransport({
     host: smtpHost,
     port: smtpPort,
+    secure: useSecure,
     auth: {
       user: smtpUser,
       pass: smtpPass,
+    },
+    tls: {
+      // Do not reject self-signed certs in development
+      rejectUnauthorized: process.env.NODE_ENV === 'production',
     },
   });
 };
