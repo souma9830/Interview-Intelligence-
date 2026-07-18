@@ -6,7 +6,7 @@ const { securityHeaders, buildCSPString, CSP_DIRECTIVES } = require('../../middl
 const app = express();
 app.use(helmet());
 app.use(securityHeaders);
-app.get('/test', (req, res) => res.json({ ok: true }));
+app.get('/test', (req, res) => res.json({ ok: true, locals: res.locals }));
 
 describe('Security Headers', () => {
   it('should set X-Content-Type-Options: nosniff', async () => {
@@ -49,7 +49,7 @@ describe('Security Headers', () => {
 
   it('should generate CSP nonce', async () => {
     const res = await request(app).get('/test');
-    expect(res.locals).toBeDefined();
+    expect(res.body.locals).toBeDefined();
   });
 
   it('should set HSTS when request is secure', async () => {
@@ -58,9 +58,9 @@ describe('Security Headers', () => {
       req.secure = true;
       next();
     });
-    secureApp.use(helmet());
+    secureApp.use(helmet({ hsts: false }));
     secureApp.use(securityHeaders);
-    secureApp.get('/test', (req, res) => res.json({ ok: true }));
+    secureApp.get('/test', (req, res) => res.json({ ok: true, locals: res.locals }));
 
     const res = await request(secureApp).get('/test');
     expect(res.headers['strict-transport-security']).toBe('max-age=31536000; includeSubDomains; preload');

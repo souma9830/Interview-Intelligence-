@@ -1,5 +1,5 @@
-const queryProfiler = require('../../services/queryProfiler');
-const queryOptimizer = require('../../utils/queryOptimizer');
+const queryProfiler = require('../services/queryProfiler');
+const queryOptimizer = require('../utils/queryOptimizer');
 
 describe('QueryProfiler', () => {
   beforeEach(() => {

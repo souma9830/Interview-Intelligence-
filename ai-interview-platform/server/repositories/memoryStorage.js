@@ -94,12 +94,10 @@ class MemoryStorage extends StorageAdapter {
   async deleteSchedule(id) {
     this.schedules.delete(id);
     return true;
-  async getSchedule(id) {
-    return this.schedules.get(id) || null;
   }
 
-  async deleteSchedule(id) {
-    this.schedules.delete(id);
+  async getSchedule(id) {
+    return this.schedules.get(id) || null;
   }
 }
 
