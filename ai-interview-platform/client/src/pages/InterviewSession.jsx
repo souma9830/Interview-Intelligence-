@@ -83,21 +83,32 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   const [timeLeft, setTimeLeft] = useState(60);
   const [timerActive, setTimerActive] = useState(false);
 
+  // Keep a stable ref to the submit handler so the interval callback never
+  // captures a stale closure when the timer fires at 0.
+  const handleAnswerSubmitRef = useRef(null);
+
   useEffect(() => {
-    if (!timerActive || timeLeft <= 0) return;
-    const timer = setInterval(() => {
+    if (!timerActive) return;
+
+    // A single interval that ticks every second. Using a functional state update
+    // (prev => ...) avoids capturing stale timeLeft in the closure, and the ref
+    // ensures we always call the latest version of handleAnswerSubmit.
+    const timerId = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          clearInterval(timer);
+          clearInterval(timerId);
           setSystemAlert('Time is up. Saving your answer...');
-          handleAnswerSubmit(true);
+          // Defer the submit call so it runs after the state update cycle completes.
+          setTimeout(() => handleAnswerSubmitRef.current?.(true), 0);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-    return () => clearInterval(timer);
-  }, [timerActive, timeLeft]);
+
+    return () => clearInterval(timerId);
+    // Only re-run when timerActive flips — not on every timeLeft tick.
+  }, [timerActive]);
 
   const startCamera = async () => {
     if (cameraInitialized) return;
@@ -145,16 +156,15 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     setGlobalState(prev => ({
       ...prev,
       violationCount: (prev.violationCount || 0) + 1,
-      telemetryLogs: [...(prev.telemetryLogs || []), { time: timestamp, event: 'Fullscreen exited / tab switched (Violation)' }]
+      telemetryLogs: [...(prev.telemetryLogs || []), { time: timestamp, event: 'Fullscreen exited / tab switched (Violation)' }],
     }));
-  }, []);
+    // setGlobalState is stable (from useState), so it is safe to list here.
+  }, [setGlobalState]);
 
-  useProctor({
-    interviewId,
-    enabled: hasStarted,
-    cheatWarningVisible: isCheatWarningVisible,
-    onViolation: handleViolation,
-  });
+  // useProctor expects positional args: (active: boolean, onViolation: fn)
+  // Passing an object literal was silently treating the object as a truthy
+  // value for 'active', and onViolation was never registered.
+  useProctor(hasStarted, handleViolation);
 
   const handleBeginSession = async () => {
     try {
@@ -348,6 +358,11 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
       setCurrentTab('coding');
     }
   };
+
+  // Sync the ref so the timer interval callback always has access to the
+  // most recent version of handleAnswerSubmit without needing it in deps.
+  handleAnswerSubmitRef.current = handleAnswerSubmit;
+
 
   const progress = ((currentIdx + 1) / questions.length) * 100;
 
