@@ -5,6 +5,7 @@ import RadialProgress from '../components/Common/RadialProgress';
 import PerformanceChart from '../components/Common/PerformanceChart';
 import ReportExportModal from '../components/Common/ReportExportModal';
 import EmptyState from '../components/Common/EmptyState';
+import '../styles/printStyles.css';
 
 const normalizeScore = (score, fallback = 0) => {
   const numericScore = Number(score);
@@ -201,7 +202,7 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
       <div style={{ display: 'grid', gridTemplateColumns: '4fr 6fr', gap: '24px', marginBottom: '24px' }}>
         
         {/* Composite score card */}
-        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '20px' }}>
+        <div className="print-card" style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '20px' }}>
           <div>
             <span style={{ fontSize: '11px', fontWeight: '600', color: '#aaa', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '16px' }}>AI Composite Grading</span>
             <RadialProgress score={report.overallScore} size={130} strokeWidth={10} title={report.overallScore > 85 ? 'Grade A' : 'Grade B'} />
@@ -232,7 +233,7 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
         </div>
 
         {/* Aptitude Matrix Breakdown */}
-        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="print-card" style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <h2 style={{ fontSize: '13px', fontWeight: '600', color: '#ccc', letterSpacing: '0.05em', textTransform: 'uppercase', margin: 0 }}>
             Aptitude Matrix Breakdown
           </h2>

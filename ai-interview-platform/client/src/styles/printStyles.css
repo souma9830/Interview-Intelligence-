@@ -1,0 +1,70 @@
+/**
+ * Print Optimization Stylesheet for Interview Intelligence Report.
+ * Hides sidebars, navbars, toggles, actions, and cleans up alignment.
+ */
+
+@media print {
+  /* Hide UI chrome, navigation, controllers, and non-essential tools */
+  nav,
+  aside,
+  header,
+  footer,
+  iframe,
+  .skip-link,
+  button,
+  a[role="button"],
+  video,
+  audio,
+  .pwa-prompt,
+  .theme-toggle,
+  .toast-container,
+  .restart-cta-container,
+  #sidebar,
+  #navbar {
+    display: none !important;
+  }
+
+  /* Reset layout structure for printing */
+  body, 
+  #root,
+  main,
+  #main-content {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    font-family: system-ui, -apple-system, sans-serif !important;
+  }
+
+  /* Ensure cards break page cleanly and stand out */
+  .print-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border: 1px solid #e0e0e0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    margin-bottom: 20px !important;
+    border-radius: 6px !important;
+    padding: 18px !important;
+  }
+
+  /* Text readability improvements */
+  h1, h2, h3, h4, h5, h6 {
+    color: #000000 !important;
+    page-break-after: avoid;
+  }
+
+  p, span, div, li, td {
+    color: #333333 !important;
+  }
+
+  /* Force margins and headers page controls */
+  @page {
+    size: auto;
+    margin: 20mm 15mm 20mm 15mm;
+  }
+}
