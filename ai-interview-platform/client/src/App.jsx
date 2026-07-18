@@ -10,111 +10,144 @@ import { LoadingOverlay } from './components/Common/LoadingOverlay';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { useKeyboardShortcuts, useShortcutsDialog } from './hooks/useKeyboardShortcuts';
-import { useTabValidation } from './hooks/useTabValidation';
-import { TABS, AUTH_TABS, PROTECTED_TABS } from './constants/tabs';
-import PwaInstallPrompt from './components/Common/PwaInstallPrompt';
-import OfflineBanner from './components/Common/OfflineBanner';
 
-// Hook listeners for accessibility options and keyboard navigation shortcuts
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const ErrorDashboard = lazy(() => import('./pages/ErrorDashboard'));
-const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
+const Dashboard       = lazy(() => import('./pages/Dashboard'));
+const InterviewSetup  = lazy(() => import('./pages/InterviewSetup'));
 const InterviewSession = lazy(() => import('./pages/InterviewSession'));
-const CodingTest = lazy(() => import('./pages/CodingTest'));
-const Result = lazy(() => import('./pages/Result'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const VerifyOTP = lazy(() => import('./pages/VerifyOTP'));
+const CodingTest      = lazy(() => import('./pages/CodingTest'));
+const Result          = lazy(() => import('./pages/Result'));
+const ForgotPassword  = lazy(() => import('./pages/ForgotPassword'));
+const VerifyOTP       = lazy(() => import('./pages/VerifyOTP'));
 const ScheduleInterview = lazy(() => import('./pages/ScheduleInterview'));
 
 function LoadingScreen({ message = 'Loading workspace...' }) {
   return <LoadingOverlay message={message} />;
 }
 
+// ------------------------------------------------------------------
+// Lightweight guard wrappers — keep them here so they tree-shake
+// correctly when route-level code-splitting is in place.
+// ------------------------------------------------------------------
+function ProtectedRoute({ token, setCurrentTab, children }) {
+  useEffect(() => {
+    if (!token) setCurrentTab('landing');
+  }, [token, setCurrentTab]);
+  return token ? children : null;
+}
+
+function GuestRoute({ token, setCurrentTab, children }) {
+  useEffect(() => {
+    if (token) setCurrentTab('home');
+  }, [token, setCurrentTab]);
+  return !token ? children : null;
+}
+
 export default function App() {
-  const isOnline = useOnlineStatus();
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  const [token, setToken] = useState(localStorage.getItem('camsense_token') || '');
-  const [user, setUser] = useState(null);
+  const isOnline   = useOnlineStatus();
+  const isMobile   = useMediaQuery('(max-width: 768px)');
+  const [token, setToken]             = useState(localStorage.getItem('camsense_token') || '');
+  const [user, setUser]               = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(!!token);
-  const [currentTab, setCurrentTab] = useState(token ? TABS.HOME : TABS.LANDING);
+  const [currentTab, setCurrentTab]   = useState(token ? 'home' : 'landing');
 
   const [globalState, setGlobalState] = useState({
-    role: 'Frontend Engineer',
-    experience: 'Mid-level (2-5 yrs)',
+    role:           'Frontend Engineer',
+    experience:     'Mid-level (2-5 yrs)',
     resumeUploaded: false,
-    resumeName: '',
+    resumeName:     '',
     jobDescription: '',
-    difficulty: 'Medium',
-    userAnswers: [],
-    finalCode: '',
-    codeRating: '',
-    completedTime: '',
+    difficulty:     'Medium',
+    userAnswers:    [],
+    finalCode:      '',
+    codeRating:     '',
+    completedTime:  '',
     violationCount: 0,
   });
 
-  const isAuthPage = AUTH_TABS.has(currentTab);
-  const { validateTab } = useTabValidation(currentTab, !!token);
+  const isAuthPage = ['login', 'signup', 'landing', 'forgot-password', 'verify-otp'].includes(currentTab);
 
   const shortcutsDialog = useShortcutsDialog();
 
   const navigateTo = useCallback((tab) => {
-    const safeTab = validateTab(tab);
-    setCurrentTab(safeTab);
-    if (!isAuthPage && safeTab !== currentTab) {
-      shortcutsDialog.close();
-    }
-  }, [currentTab, isAuthPage, shortcutsDialog, validateTab]);
+    setCurrentTab(tab);
+    shortcutsDialog.close();
+  }, [shortcutsDialog]);
 
+  // Shortcut map — each key must appear exactly once.
   const appShortcuts = useMemo(() => ({
-    '?': { label: 'Toggle keyboard shortcuts help', category: 'General', onPress: shortcutsDialog.toggle },
-    'h': { label: 'Go to Home', category: 'Navigation', onPress: () => navigateTo(TABS.HOME) },
-    'd': { label: 'Go to Dashboard', category: 'Navigation', onPress: () => navigateTo(TABS.DASHBOARD) },
-    's': { label: 'Go to Interview Setup', category: 'Navigation', onPress: () => navigateTo(TABS.SETUP) },
-    'k': { label: 'Go to Schedule', category: 'Navigation', onPress: () => navigateTo(TABS.SCHEDULE) },
-    'r': { label: 'Go to Results', category: 'Navigation', onPress: () => navigateTo(TABS.RESULT) },
-    'Escape': { label: 'Close dialog or cancel', category: 'General', onPress: shortcutsDialog.close },
+    '?':      { label: 'Toggle keyboard shortcuts help', category: 'General',    onPress: shortcutsDialog.toggle },
+    'h':      { label: 'Go to Home',                    category: 'Navigation',  onPress: () => navigateTo('home') },
+    'd':      { label: 'Go to Dashboard',               category: 'Navigation',  onPress: () => navigateTo('dashboard') },
+    's':      { label: 'Go to Interview Setup',         category: 'Navigation',  onPress: () => navigateTo('setup') },
+    'k':      { label: 'Go to Schedule',                category: 'Navigation',  onPress: () => navigateTo('schedule') },
+    'r':      { label: 'Go to Results',                 category: 'Navigation',  onPress: () => navigateTo('result') },
+    'Escape': { label: 'Close dialog or cancel',        category: 'General',     onPress: shortcutsDialog.close },
   }), [shortcutsDialog, navigateTo]);
 
-  const registeredShortcuts = useKeyboardShortcuts(appShortcuts, !isAuthPage);
+  // Only register shortcuts when the user is in an authenticated, non-auth page context.
+  useKeyboardShortcuts(appShortcuts, !isAuthPage);
 
   useEffect(() => {
     if (token) {
       fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
         .then(d => {
-          if (d.success && d.data) { setUser(d.data); if (AUTH_TABS.has(currentTab)) setCurrentTab(TABS.HOME); }
-          else { localStorage.removeItem('camsense_token'); setToken(''); setCurrentTab(TABS.LANDING); }
+          if (d.success && d.data) {
+            setUser(d.data);
+            if (['login', 'signup', 'landing'].includes(currentTab)) setCurrentTab('home');
+          } else {
+            localStorage.removeItem('camsense_token');
+            setToken('');
+            setCurrentTab('landing');
+          }
         })
-        .catch(() => { localStorage.removeItem('camsense_token'); setToken(''); setCurrentTab(TABS.LANDING); })
+        .catch(() => {
+          localStorage.removeItem('camsense_token');
+          setToken('');
+          setCurrentTab('landing');
+        })
         .finally(() => setCheckingAuth(false));
     } else {
       setCheckingAuth(false);
-      if (currentTab !== TABS.SIGNUP && currentTab !== TABS.LOGIN) setCurrentTab(TABS.LANDING);
+      if (!['signup', 'login'].includes(currentTab)) setCurrentTab('landing');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const handleLogout = async () => {
     try { await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }); } catch {}
     localStorage.removeItem('camsense_token');
-    setToken(''); setUser(null); setCurrentTab(TABS.LANDING);
+    setToken(''); setUser(null); setCurrentTab('landing');
   };
 
   const renderContent = () => {
     switch (currentTab) {
-      case TABS.LANDING: return <GuestRoute token={token} setCurrentTab={setCurrentTab}><Landing setCurrentTab={setCurrentTab} /></GuestRoute>;
-      case TABS.LOGIN: return <GuestRoute token={token} setCurrentTab={setCurrentTab}><Login setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} /></GuestRoute>;
-      case TABS.SIGNUP: return <GuestRoute token={token} setCurrentTab={setCurrentTab}><Signup setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} /></GuestRoute>;
-      case TABS.FORGOT_PASSWORD: return <GuestRoute token={token} setCurrentTab={setCurrentTab}><ForgotPassword setCurrentTab={setCurrentTab} /></GuestRoute>;
-      case TABS.VERIFY_OTP: return <GuestRoute token={token} setCurrentTab={setCurrentTab}><VerifyOTP setCurrentTab={setCurrentTab} /></GuestRoute>;
-      case TABS.HOME: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Home setCurrentTab={setCurrentTab} /></ProtectedRoute>;
-      case TABS.DASHBOARD: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Dashboard setCurrentTab={setCurrentTab} setGlobalState={setGlobalState} /></ProtectedRoute>;
-      case TABS.SCHEDULE: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><ScheduleInterview setCurrentTab={setCurrentTab} /></ProtectedRoute>;
-      case TABS.SETUP: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><InterviewSetup setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
-      case TABS.SESSION: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><InterviewSession globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
-      case TABS.CODING: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><CodingTest globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
-      case TABS.RESULT: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Result globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
-      case TABS.ERRORS: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><ErrorDashboard setCurrentTab={setCurrentTab} /></ProtectedRoute>;
-      default: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Home setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'landing':
+        return <GuestRoute token={token} setCurrentTab={setCurrentTab}><Landing setCurrentTab={setCurrentTab} /></GuestRoute>;
+      case 'login':
+        return <GuestRoute token={token} setCurrentTab={setCurrentTab}><Login setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} /></GuestRoute>;
+      case 'signup':
+        return <GuestRoute token={token} setCurrentTab={setCurrentTab}><Signup setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} /></GuestRoute>;
+      case 'forgot-password':
+        return <GuestRoute token={token} setCurrentTab={setCurrentTab}><ForgotPassword setCurrentTab={setCurrentTab} /></GuestRoute>;
+      case 'verify-otp':
+        return <GuestRoute token={token} setCurrentTab={setCurrentTab}><VerifyOTP setCurrentTab={setCurrentTab} /></GuestRoute>;
+      case 'home':
+        return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Home setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'dashboard':
+        return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Dashboard setCurrentTab={setCurrentTab} setGlobalState={setGlobalState} /></ProtectedRoute>;
+      case 'schedule':
+        return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><ScheduleInterview setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'setup':
+        return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><InterviewSetup setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'session':
+        return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><InterviewSession globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'coding':
+        return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><CodingTest globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'result':
+        return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Result globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      default:
+        return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Home setCurrentTab={setCurrentTab} /></ProtectedRoute>;
     }
   };
 
@@ -125,10 +158,9 @@ export default function App() {
   return (
     <ToastProvider>
       <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-app)', fontFamily: 'Inter, sans-serif', color: 'var(--color-text)', transition: 'background 0.3s, color 0.3s' }}>
-        <a href="#main-content" className="skip-link" style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: 9999, padding: '8px 16px', background: '#fff', color: '#000', fontSize: '14px', fontWeight: '600', textDecoration: 'none' }} onFocus={(e) => { e.target.style.left = '16px'; e.target.style.top = '16px'; }} onBlur={(e) => { e.target.style.left = '-9999px'; e.target.style.top = '0'; }}>
+        <a href="#main-content" className="skip-link" style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: 9999, padding: '8px 16px', background: '#fff', color: '#000', fontSize: '14px', fontWeight: '600', textDecoration: 'none' }}>
           Skip to main content
         </a>
-        <div id="sr-announcements" role="status" aria-live="polite" style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: '0' }} />
         {!isAuthPage && <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} user={user} globalState={globalState} onLogout={handleLogout} />}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           {!isAuthPage && <Navbar />}
@@ -139,10 +171,6 @@ export default function App() {
           </main>
         </div>
       </div>
-      <PwaInstallPrompt />
-      <OfflineBanner />
     </ToastProvider>
   );
 }
-
-// TODO: Issue 245 Resume skill gap analysis
