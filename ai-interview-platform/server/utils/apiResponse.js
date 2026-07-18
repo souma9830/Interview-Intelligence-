@@ -10,19 +10,44 @@ class AppError extends Error {
   }
 }
 
+/**
+ * Reads the requestId from the response's underlying request object.
+ * Safe to call even if requestLogger middleware hasn't run yet.
+ * @param {import('express').Response} res
+ * @returns {string|undefined}
+ */
+function getRequestId(res) {
+  return res.req?.requestId;
+}
+
+/**
+ * Sends a standardised successful JSON response.
+ * Includes requestId in the body so distributed log tracing works without
+ * header inspection on the client side.
+ */
 function sendSuccess(res, data = null, statusCode = 200, message = 'OK') {
-  return res.status(statusCode).json({
+  const body = {
     success: true,
     message,
     data,
-    timestamp: new Date().toISOString()
-  });
+    timestamp: new Date().toISOString(),
+  };
+  const requestId = getRequestId(res);
+  if (requestId) {
+    body.requestId = requestId;
+  }
+  return res.status(statusCode).json(body);
 }
 
 function sendCreated(res, data = null, message = 'Resource created successfully') {
   return sendSuccess(res, data, 201, message);
 }
 
+/**
+ * Sends a standardised error JSON response.
+ * Always includes requestId if available so the client can quote it when
+ * reporting the error to support or logging systems.
+ */
 function sendError(res, message = 'Internal server error', statusCode = 500, errors = null) {
   const response = {
     success: false,
@@ -32,8 +57,9 @@ function sendError(res, message = 'Internal server error', statusCode = 500, err
   if (errors) {
     response.errors = errors;
   }
-  if (res.req && res.req.requestId) {
-    response.requestId = res.req.requestId;
+  const requestId = getRequestId(res);
+  if (requestId) {
+    response.requestId = requestId;
   }
   return res.status(statusCode).json(response);
 }
@@ -42,12 +68,16 @@ function handleControllerError(res, error, defaultMessage = 'Internal server err
   if (error instanceof AppError) {
     return sendError(res, error.message, error.statusCode);
   }
-  logger.error(`Controller error: ${defaultMessage}`, { error: error.message, stack: error.stack });
+  logger.error(`Controller error: ${defaultMessage}`, {
+    error: error.message,
+    stack: error.stack,
+    requestId: getRequestId(res),
+  });
   return sendError(res, defaultMessage, 500);
 }
 
 function paginatedResponse(res, data, total, page, limit, message = 'OK') {
-  return res.status(200).json({
+  const body = {
     success: true,
     message,
     data,
@@ -56,10 +86,22 @@ function paginatedResponse(res, data, total, page, limit, message = 'OK') {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-      hasMore: page * limit < total
+      hasMore: page * limit < total,
     },
-    timestamp: new Date().toISOString()
-  });
+    timestamp: new Date().toISOString(),
+  };
+  const requestId = getRequestId(res);
+  if (requestId) {
+    body.requestId = requestId;
+  }
+  return res.status(200).json(body);
 }
 
-module.exports = { sendSuccess, sendCreated, sendError, handleControllerError, paginatedResponse };
+module.exports = {
+  AppError,
+  sendSuccess,
+  sendCreated,
+  sendError,
+  handleControllerError,
+  paginatedResponse,
+};
