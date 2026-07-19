@@ -2,10 +2,31 @@ import React, { useState, useMemo } from 'react';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { auth, googleProvider } from '../firebase';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+
 import { sendPasswordReset } from '../services/auth';
 import { useToast } from '../components/Common/ToastProvider';
 import { useFormValidation, validators, createField } from '../hooks/useFormValidation';
 import { announceToScreenReader, getAriaInvalid, getErrorId } from '../utils/accessibility';
+
+// Detect if Firebase is using placeholder/dummy credentials (not yet configured)
+const isFirebaseConfigured = () => {
+  const apiKey = import.meta.env.VITE_FIREBASE_API_KEY || '';
+  return apiKey.length > 10 && !apiKey.includes('REPLACE') && !apiKey.startsWith('dummy');
+};
+
+// Demo-mode login: bypasses Firebase entirely using the server's demo token
+const demoLogin = (name, email) => {
+  const DEMO_TOKEN = 'demo_token_active';
+  localStorage.setItem('camsense_token', DEMO_TOKEN);
+  return {
+    token: DEMO_TOKEN,
+    user: {
+      uid: 'demo_uid',
+      name: name || (email ? email.split('@')[0] : 'Demo User'),
+      email: email || 'demo@example.com',
+    }
+  };
+};
 
 // Consumer of password strength indicators in related authentication pages
 const card = {
@@ -164,6 +185,7 @@ const toastContainer = (type) => ({
 });
 
 export default function Login({ setToken, setUser, setCurrentTab }) {
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
@@ -182,45 +204,75 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
     if (!validate()) return;
     setLoading(true);
     try {
+      // Use demo mode if Firebase is not configured
+      if (!isFirebaseConfigured()) {
+        const { token, user } = demoLogin(null, email);
+        toast.show('Signed in! (Demo mode)', 'success');
+        setTimeout(() => {
+          setToken(token);
+          setUser(user);
+          setCurrentTab('home');
+        }, 1200);
+        return;
+      }
+
+      // Firebase email/password login
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
-      try {
-        await fetch('/api/auth/sync-user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: fbUser.displayName })
-        });
-      } catch {}
 
+      // Sync Firebase user to MongoDB (best-effort; UI should still proceed)
+      // protect() expects an Authorization: Bearer <Firebase ID token>
       try {
         await fetch('/api/auth/sync-user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ name: fbUser.displayName || email.split('@')[0], email: fbUser.email, firebaseUid: fbUser.uid })
+          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: fbUser.displayName })
         });
       } catch (syncErr) {
-        console.warn('[Login] MongoDB sync deferred:', syncErr.message);
+        console.warn('[Login] sync-user failed:', syncErr?.message || syncErr);
       }
 
       toast.show('Signed in successfully!', 'success');
+
       setTimeout(() => {
         localStorage.setItem('camsense_token', token);
         setToken(token);
-        setUser({ uid: fbUser.uid, name: fbUser.displayName || email.split('@')[0], email: fbUser.email });
+        setUser({ uid: fbUser.uid, name: fbUser.displayName, email: fbUser.email });
         setCurrentTab('home');
       }, 1200);
     } catch (err) {
+      console.error('[Login] Firebase error:', err.code, err.message);
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        toast.show('Invalid email or password', 'error');
+        toast.show('Invalid email or password.', 'error');
+      } else if (err.code === 'auth/invalid-api-key' || err.code === 'auth/api-key-not-valid') {
+        toast.show('Firebase is not configured. Please contact support.', 'error');
+      } else if (err.code === 'auth/network-request-failed') {
+        toast.show('Network error. Please check your internet connection.', 'error');
+      } else if (err.code === 'auth/too-many-requests') {
+        toast.show('Too many attempts. Please wait a moment and try again.', 'error');
+      } else if (err.code === 'auth/user-disabled') {
+        toast.show('This account has been disabled. Please contact support.', 'error');
       } else {
-        toast.show('Authentication failed. Check connection.', 'error');
+        toast.show(err.message || 'Authentication failed. Check connection.', 'error');
       }
+    } finally {
+      setTimeout(() => setLoading(false), 1200);
     }
-    finally { setTimeout(() => setLoading(false), 1200); }
   };
 
   const handleGoogleLogin = async () => {
+    // Demo mode fallback for Google login
+    if (!isFirebaseConfigured()) {
+      const { token, user } = demoLogin('Demo User', 'demo@example.com');
+      toast.show('Signed in with Google! (Demo mode)', 'success');
+      setTimeout(() => {
+        setToken(token);
+        setUser(user);
+        setCurrentTab('home');
+      }, 1200);
+      return;
+    }
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const fbUser = userCredential.user;

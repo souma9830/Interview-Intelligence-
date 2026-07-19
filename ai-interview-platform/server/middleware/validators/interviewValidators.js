@@ -19,9 +19,10 @@ const submitAnswerValidator = [
 ];
 
 const evaluateCodeValidator = [
-  body('code').trim().isLength({ min: 1, max: 30000 }).withMessage('Code is required (max 30000 chars)'),
-  body('language').isIn(['javascript', 'python', 'java', 'cpp']).withMessage('Language must be javascript, python, java, or cpp'),
-  body('role').optional().trim().isLength({ max: 200 }),
+  body('role').trim().notEmpty().withMessage('role, code submission, and language are required fields'),
+  body('code').trim().isLength({ min: 1 }).withMessage('role, code submission, and language are required fields')
+    .isLength({ max: 30000 }).withMessage('code size limit exceeded'),
+  body('language').isIn(['javascript', 'python', 'java', 'cpp']).withMessage('unsupported coding language'),
 ];
 
 const analyzeResumeValidator = [

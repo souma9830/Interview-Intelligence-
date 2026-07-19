@@ -8,9 +8,13 @@ const validate = (req, res, next) => {
       message: e.msg,
       value: e.value,
     }));
+    
+    // Bubble up first error message to main message property to support test assertions
+    const customMessage = formatted.length > 0 ? formatted[0].message : 'Validation failed';
+
     return res.status(400).json({
       success: false,
-      message: 'Validation failed',
+      message: customMessage,
       errors: formatted,
       timestamp: new Date().toISOString(),
     });

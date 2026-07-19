@@ -9,6 +9,26 @@ import { getAriaInvalid, getErrorId } from '../utils/accessibility';
 
 const inp = (err) => ({ width: '100%', background: '#0d0d0d', border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`, borderRadius: '8px', padding: '10px 12px 10px 38px', fontSize: '14px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box', transition: 'border-color 0.15s' });
 
+// Detect if Firebase is using placeholder/dummy credentials (not yet configured)
+const isFirebaseConfigured = () => {
+  const apiKey = import.meta.env.VITE_FIREBASE_API_KEY || '';
+  return apiKey.length > 10 && !apiKey.includes('REPLACE') && !apiKey.startsWith('dummy');
+};
+
+// Demo-mode login: bypasses Firebase entirely using the server's demo token
+const demoLogin = (name, email) => {
+  const DEMO_TOKEN = 'demo_token_active';
+  localStorage.setItem('camsense_token', DEMO_TOKEN);
+  return {
+    token: DEMO_TOKEN,
+    user: {
+      uid: 'demo_uid',
+      name: name || email.split('@')[0] || 'Demo User',
+      email: email || 'demo@example.com',
+    }
+  };
+};
+
 export default function Signup({ setToken, setUser, setCurrentTab }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -30,6 +50,17 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
     if (!validate()) return;
     setLoading(true);
     try {
+      // Use demo mode if Firebase is not configured
+      if (!isFirebaseConfigured()) {
+        const { token, user } = demoLogin(name, email);
+        toast.show('Account created! (Demo mode)', 'success');
+        setTimeout(() => {
+          setToken(token);
+          setUser(user);
+          setCurrentTab('home');
+        }, 1200);
+        return;
+      }
 
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
@@ -37,6 +68,7 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       const token = await fbUser.getIdToken();
 
       try {
+
         await fetch('/api/auth/sync-user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -58,23 +90,49 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       setTimeout(() => { 
         localStorage.setItem('camsense_token', token); 
         setToken(token); 
+        setUser({ uid: fbUser.uid, name: name || fbUser.displayName || email.split('@')[0], email: fbUser.email }); 
+        setCurrentTab('home'); 
+      }, 1200);
+    } catch (err) {
+      console.error('[Signup] Firebase error:', err.code, err.message);
         setUser({ uid: fbUser.uid, name: name || email.split('@')[0], email: email }); 
         setCurrentTab('home'); 
       }, 1200);
     } catch (err) {
 
       if (err.code === 'auth/email-already-in-use') {
-        toast.show('Email already in use', 'error');
+        toast.show('Email already in use. Try logging in instead.', 'error');
       } else if (err.code === 'auth/weak-password') {
-        toast.show('Password is too weak', 'error');
+        toast.show('Password is too weak. Use at least 6 characters.', 'error');
+      } else if (err.code === 'auth/invalid-api-key' || err.code === 'auth/api-key-not-valid') {
+        toast.show('Firebase is not configured. Please contact support.', 'error');
+      } else if (err.code === 'auth/network-request-failed') {
+        toast.show('Network error. Please check your internet connection.', 'error');
+      } else if (err.code === 'auth/too-many-requests') {
+        toast.show('Too many attempts. Please wait a moment and try again.', 'error');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        toast.show('Email/password sign-up is not enabled. Please contact support.', 'error');
+      } else if (err.code === 'auth/invalid-email') {
+        toast.show('Invalid email address format.', 'error');
       } else {
-        toast.show('Registration failed. Check connection.', 'error'); 
+        toast.show(err.message || 'Registration failed. Check connection.', 'error');
       }
     }
     finally { setTimeout(() => setLoading(false), 1200); }
   };
 
   const handleGoogleSignup = async () => {
+    // Demo mode fallback for Google signup
+    if (!isFirebaseConfigured()) {
+      const { token, user } = demoLogin('Demo User', 'demo@example.com');
+      toast.show('Signed in! (Demo mode)', 'success');
+      setTimeout(() => {
+        setToken(token);
+        setUser(user);
+        setCurrentTab('home');
+      }, 1200);
+      return;
+    }
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const fbUser = userCredential.user;

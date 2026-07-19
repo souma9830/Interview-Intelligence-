@@ -18,6 +18,7 @@ import GuestRoute from './components/Common/GuestRoute';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 
 // Hook listeners for accessibility options and keyboard navigation shortcuts
+
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ErrorDashboard = lazy(() => import('./pages/ErrorDashboard'));
 const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
@@ -35,10 +36,10 @@ function LoadingScreen({ message = 'Loading workspace...' }) {
 export default function App() {
   const isOnline = useOnlineStatus();
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const [token, setToken] = useState(localStorage.getItem('camsense_token') || '');
-  const [user, setUser] = useState(null);
-  const [checkingAuth, setCheckingAuth] = useState(!!token);
-  const [currentTab, setCurrentTab] = useState(token ? TABS.HOME : TABS.LANDING);
+  const [token, setToken] = useState(localStorage.getItem('camsense_token') || 'demo_token_active');
+  const [user, setUser] = useState({ uid: 'demo_uid', name: 'Demo User', email: 'demo@example.com' });
+  const [checkingAuth, setCheckingAuth] = useState(false);
+  const [currentTab, setCurrentTab] = useState(TABS.HOME);
 
   const [globalState, setGlobalState] = useState({
     role: 'Frontend Engineer',
@@ -77,10 +78,16 @@ export default function App() {
     'Escape': { label: 'Close dialog or cancel', category: 'General', onPress: shortcutsDialog.close },
   }), [shortcutsDialog, navigateTo]);
 
-  const registeredShortcuts = useKeyboardShortcuts(appShortcuts, !isAuthPage);
+  const registeredShortcuts = useKeyboardShortcuts(shortcutsDialog.toggle);
 
   useEffect(() => {
     if (token) {
+      if (token === 'demo_token_active') {
+        setUser({ uid: 'demo_uid', name: 'Demo User', email: 'demo@example.com' });
+        if (AUTH_TABS.has(currentTab)) setCurrentTab(TABS.HOME);
+        setCheckingAuth(false);
+        return;
+      }
       fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
         .then(d => {

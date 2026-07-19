@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, Loader2, ChevronRight, Briefcase, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { Calendar, Clock, Loader2, Briefcase, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { useToast } from '../components/Common/ToastProvider';
 

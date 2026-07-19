@@ -68,21 +68,31 @@ class MongoStorage extends StorageAdapter {
   }
 
   async saveSchedule(schedule) {
-    return { ...schedule, _id: schedule._id || `schedule_${Date.now()}`, createdAt: schedule.createdAt || new Date() };
+    const Schedule = require('../models/Schedule');
+    if (schedule._id && schedule._id.length === 24) {
+      return await Schedule.findByIdAndUpdate(schedule._id, schedule, { new: true, upsert: true }).lean();
+    }
+    const cleanData = { ...schedule };
+    if (cleanData._id) delete cleanData._id;
+    const record = new Schedule(cleanData);
+    await record.save();
+    return record.toObject();
   }
 
   async listSchedules(userId) {
-    return [];
+    const Schedule = require('../models/Schedule');
+    return await Schedule.find({ user: userId }).sort({ scheduledAt: 1 }).lean();
   }
 
-  async deleteSchedule() {
-    return true;
   async getSchedule(id) {
-    return null;
+    const Schedule = require('../models/Schedule');
+    return await Schedule.findById(id).lean();
   }
 
   async deleteSchedule(id) {
-    return;
+    const Schedule = require('../models/Schedule');
+    await Schedule.findByIdAndDelete(id);
+    return true;
   }
 }
 
