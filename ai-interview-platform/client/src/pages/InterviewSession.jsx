@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Video, Camera, Play, AlertTriangle } from 'lucide-react';
-import VideoRecorder from '../components/Telemetry/VideoRecorder';
+import WebcamStream from '../components/Telemetry/WebcamStream';
 import { getAuthHeader } from '../utils/authHeaders';
 import { useProctor } from '../hooks/useProctor';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 export default function InterviewSession({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
   const interviewId = globalState.interviewId || 'demo_session_active';
   const isOnline = useOnlineStatus();
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   // Redirect if no resume uploaded
   useEffect(() => {
@@ -410,7 +412,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
       </div>
 
       {/* Main Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '5fr 7fr', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '5fr 7fr', gap: '20px' }}>
 
         {/* LEFT — AI Avatar + Webcam */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -446,7 +448,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
           </div>
 
           {/* Webcam / Telemetry Recorder */}
-          <VideoRecorder
+          <WebcamStream
             isSessionActive={hasStarted}
             onRecordingComplete={(videoUrl) => {
               setGlobalState(prev => ({

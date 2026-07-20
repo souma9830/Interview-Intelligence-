@@ -1,14 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Video, VideoOff, Square, Play, Download, AlertCircle } from 'lucide-react';
-import { STANDARD_AUDIO_CONSTRAINTS, STANDARD_VIDEO_CONSTRAINTS } from '../../utils/audioConstraints';
+import { Video, VideoOff, Square, Play, Download } from 'lucide-react';
+import { getCameraPermission, stopStreamTracks } from '../../utils/mediaUtils';
 import { RECORDING_STATUS, PROCTOR_LABELS } from '../../utils/telemetryConstants';
 
-export default function VideoRecorder({ onRecordingComplete, isSessionActive }) {
+export default function WebcamStream({ onRecordingComplete, isSessionActive }) {
   const [permission, setPermission] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState(RECORDING_STATUS.IDLE);
   const [stream, setStream] = useState(null);
   const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [videoChunks, setVideoChunks] = useState([]);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState('');
   const [cameraError, setCameraError] = useState('');
   const liveVideoRef = useRef(null);
@@ -29,20 +28,20 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
 
   useEffect(() => {
     if (isSessionActive && !stream) {
-      getCameraPermission();
+      handleInitCamera();
     }
     return () => {
-      stopCameraStream();
+      if (stream) {
+        stopStreamTracks(stream);
+        setStream(null);
+      }
     };
   }, [isSessionActive]);
 
-  const getCameraPermission = async () => {
+  const handleInitCamera = async () => {
     setCameraError('');
     try {
-      const combinedStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: 'user' },
-        audio: { echoCancellation: true, noiseSuppression: true }
-      });
+      const combinedStream = await getCameraPermission();
       setPermission(true);
       setStream(combinedStream);
       if (liveVideoRef.current) {
@@ -56,13 +55,6 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
         : `Camera error: ${err.message}`;
       setCameraError(msg);
       setPermission(false);
-    }
-  };
-
-  const stopCameraStream = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
     }
   };
 
@@ -124,7 +116,7 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <VideoOff size={24} color="#555" />
             <span style={{ fontSize: '12px', color: '#888' }}>{PROCTOR_LABELS.OFFLINE}</span>
-            <button onClick={getCameraPermission} style={{ marginTop: '8px', padding: '4px 10px', fontSize: '11px', background: '#222', border: '1px solid #333', color: '#ccc', borderRadius: '4px', cursor: 'pointer' }}>
+            <button onClick={handleInitCamera} style={{ marginTop: '8px', padding: '4px 10px', fontSize: '11px', background: '#222', border: '1px solid #333', color: '#ccc', borderRadius: '4px', cursor: 'pointer' }}>
               {PROCTOR_LABELS.PERMISSION_GRANT}
             </button>
           </div>
@@ -167,7 +159,7 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
           </div>
         )}
         {!permission && (
-          <button onClick={getCameraPermission} disabled={!!cameraError} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #333', background: 'transparent', color: cameraError ? '#555' : '#fff', fontSize: '11px', fontWeight: '600', cursor: cameraError ? 'not-allowed' : 'pointer' }}>
+          <button onClick={handleInitCamera} disabled={!!cameraError} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #333', background: 'transparent', color: cameraError ? '#555' : '#fff', fontSize: '11px', fontWeight: '600', cursor: cameraError ? 'not-allowed' : 'pointer' }}>
             Retry Camera
           </button>
         )}
