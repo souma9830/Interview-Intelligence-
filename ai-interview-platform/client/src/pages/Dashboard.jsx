@@ -142,9 +142,16 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
     const now = Date.now();
     const scheduledAt = new Date(schedule.scheduledAt).getTime();
     const endAt = scheduledAt + (schedule.durationMinutes || 45) * 60 * 1000;
-    if (now > endAt) return { label: 'Completed', color: '#555' };
-    if (now >= scheduledAt) return { label: 'Active', color: '#4ade80' };
-    return { label: 'Upcoming', color: '#facc15' };
+    // Allow joining up to 5 minutes before the scheduled time
+    const joinWindowMs = 5 * 60 * 1000;
+    if (now > endAt) return { label: 'Completed', color: '#555', canStart: false };
+    if (now >= scheduledAt - joinWindowMs) return { label: 'Active', color: '#4ade80', canStart: true };
+    // Calculate human-readable time remaining
+    const msLeft = scheduledAt - now;
+    const minsLeft = Math.ceil(msLeft / 60000);
+    const hoursLeft = Math.floor(minsLeft / 60);
+    const countdown = hoursLeft > 0 ? `${hoursLeft}h ${minsLeft % 60}m` : `${minsLeft}m`;
+    return { label: 'Upcoming', color: '#facc15', canStart: false, countdown };
   };
 
   if (loading) {
@@ -178,11 +185,28 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
     <div style={{ maxWidth: '960px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
 
       
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fff', letterSpacing: '-0.02em', margin: '0 0 6px' }}>Performance Dashboard</h1>
-        <p style={{ fontSize: '14px', color: '#aaa', lineHeight: '1.6' }}>
-          Monitor your assessment attempts, skill improvements, and hiring readiness reports.
-        </p>
+      <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h1 style={{
+            fontSize: '28px', fontWeight: '700', letterSpacing: '-0.02em', margin: '0 0 6px',
+            background: 'linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+          }}>Performance Dashboard</h1>
+          <p style={{ fontSize: '14px', color: '#aaa', lineHeight: '1.6', margin: 0 }}>
+            Monitor your assessment attempts, skill improvements, and hiring readiness reports.
+          </p>
+        </div>
+        {schedules.some(s => getScheduleStatus(s).canStart) && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px',
+            background: 'rgba(74, 222, 128, 0.08)', border: '1px solid rgba(74, 222, 128, 0.3)',
+            borderRadius: '20px', fontSize: '12px', fontWeight: '600', color: '#4ade80',
+            animation: 'pulse 2s ease-in-out infinite',
+          }}>
+            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} />
+            Live Session Ready
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
@@ -223,82 +247,63 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
                   const status = getScheduleStatus(schedule);
                   const isLocked = status.label === 'Upcoming';
                   return (
-                  <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
-                          <span style={{ fontSize: '10px', color: status.color, fontWeight: '500' }}>{status.label}</span>
+                    <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
+                            <span style={{ fontSize: '10px', color: status.color, fontWeight: '500' }}>{status.label}</span>
+                          </div>
+                          <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} • {schedule.durationMinutes} min</span>
+                          {schedule.notes && <span style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>{schedule.notes}</span>}
                         </div>
-                        <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} • {schedule.durationMinutes} min</span>
-                        {schedule.notes && <span style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>{schedule.notes}</span>}
+                        <button
+                          onClick={() => handleDeleteSchedule(schedule._id)}
+                          disabled={deletingSchedule === schedule._id}
+                          style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', padding: '4px' }}
+                          title="Delete schedule"
+                        >
+                          {deletingSchedule === schedule._id ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={12} />}
+                        </button>
                       </div>
-                      <button
-                        onClick={() => handleDeleteSchedule(schedule._id)}
-                        disabled={deletingSchedule === schedule._id}
-                        style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', padding: '4px' }}
-                        title="Delete schedule"
-                      >
-                        {deletingSchedule === schedule._id ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={12} />}
-                      </button>
-                    </div>
 
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                      <button
-                        disabled={isLocked}
-                  const isFuture = new Date(schedule.scheduledAt).getTime() > Date.now();
-                  return (
-                    <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
-                      <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} &bull; {schedule.durationMinutes} min</span>
-                      {schedule.notes && <span style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>{schedule.notes}</span>}
-                      <button
-                        disabled={isFuture}
-                        onClick={() => {
-                          setGlobalState(prev => ({ ...prev, role: schedule.role }));
-                          setCurrentTab('setup');
-                        }}
-                        style={{
-                          flex: 1, padding: '6px 12px', fontSize: '11px', borderRadius: '4px', border: 'none',
-                          cursor: isLocked ? 'not-allowed' : 'pointer',
-                          background: isLocked ? '#1a1a1a' : '#fff',
-                          color: isLocked ? '#555' : '#000',
-                          fontWeight: '600', transition: 'all 0.15s',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-                        }}
-                      >
-                        {isLocked ? <><Lock size={10} /> Locked</> : 'Start Session'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-              {schedules.length > ITEMS_PER_PAGE && (
-                <Pagination currentPage={schedulePage} totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)} onPageChange={setSchedulePage} />
-              )}
-              <button
-                onClick={() => setCurrentTab('schedule')}
-                style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto', textDecoration: 'underline' }}
-              >
-                View All <ExternalLink size={10} />
-              </button>
-                          marginTop: '8px', padding: '6px 12px', fontSize: '11px', borderRadius: '4px', border: 'none', cursor: isFuture ? 'not-allowed' : 'pointer',
-                          background: isFuture ? '#1a1a1a' : '#fff',
-                          color: isFuture ? '#555' : '#000',
-                          fontWeight: '600', transition: 'all 0.15s',
-                        }}
-                      >
-                        {isFuture ? 'Starts later' : 'Start Session'}
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                        <button
+                          disabled={isLocked}
+                          onClick={() => {
+                            setGlobalState(prev => ({ ...prev, role: schedule.role }));
+                            setCurrentTab('setup');
+                          }}
+                          style={{
+                            flex: 1, padding: '6px 12px', fontSize: '11px', borderRadius: '4px', border: 'none',
+                            cursor: isLocked ? 'not-allowed' : 'pointer',
+                            background: isLocked ? '#1a1a1a' : '#fff',
+                            color: isLocked ? '#555' : '#000',
+                            fontWeight: '600', transition: 'all 0.15s',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                          }}
+                        >
+                          {isLocked ? <><Lock size={10} /> Locked</> : 'Start Session'}
+                        </button>
+                      </div>
                     </div>
                   );
                 });
               })()}
             </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+            {schedules.length > ITEMS_PER_PAGE && (
+              <Pagination currentPage={schedulePage} totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)} onPageChange={setSchedulePage} />
+            )}
+            <button
+              onClick={() => setCurrentTab('schedule')}
+              style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto', textDecoration: 'underline' }}
+            >
+              View All <ExternalLink size={10} />
+            </button>
           </div>
+        </div>
       </div>
 
       {reports.length === 0 ? (
@@ -316,8 +321,7 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-          
+
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '16px' }}>
             {[
               { label: 'Interviews Completed', val: stats.total, icon: FileText, desc: 'Total sessions completed' },
