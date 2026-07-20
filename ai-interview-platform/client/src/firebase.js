@@ -1,7 +1,3 @@
-// Mock firebase to allow build to pass
-export const auth = {};
-export const googleProvider = {};
-
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
@@ -19,4 +15,3 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export default app;
-  

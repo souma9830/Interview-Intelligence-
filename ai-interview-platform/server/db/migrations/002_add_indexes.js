@@ -13,7 +13,7 @@ module.exports.up = async () => {
     await db.collection('reports').createIndex({ overallScore: -1 }, { background: true });
     await db.collection('reports').createIndex({ interview: 1 }, { background: true });
   }
-  if (names.includes('refreshokens')) {
+  if (names.includes('refreshtokens')) {
     await db.collection('refreshtokens').createIndex({ token: 1 }, { unique: true, background: true });
     await db.collection('refreshtokens').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, background: true });
   }
