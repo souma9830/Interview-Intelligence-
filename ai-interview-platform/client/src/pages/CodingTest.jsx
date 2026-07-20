@@ -4,7 +4,7 @@ import { Code2, Terminal, Play, ChevronRight, FileCode, RefreshCw, Mic, MicOff, 
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useProctor } from '../hooks/useProctor';
 import { LoadingOverlay } from '../components/Common/LoadingOverlay';
-import { MonacoEditorWrapper } from '../components/Common/MonacoEditorWrapper';
+import MonacoEditorWrapper from '../components/Common/MonacoEditorWrapper';
 import Modal from '../components/Common/Modal';
 
 // Coding assessment window integrated with live execution telemetry and auto-saving drafts

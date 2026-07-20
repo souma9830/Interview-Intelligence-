@@ -5,7 +5,18 @@
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3';
-const { sanitizeAndParseJson } = require('../utils/sanitizers/jsonSanitizer');
+const sanitizeAndParseJson = (text, fallback) => {
+  try {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}') + 1;
+    if (start !== -1 && end !== -1) {
+      return JSON.parse(text.slice(start, end));
+    }
+    return JSON.parse(text);
+  } catch (e) {
+    return fallback;
+  }
+};
 
 /**
  * Generate technical, HR, and coding questions using local Ollama LLM.

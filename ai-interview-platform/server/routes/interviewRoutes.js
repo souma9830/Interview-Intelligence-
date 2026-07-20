@@ -35,7 +35,7 @@ router.post('/start', protect, guardInterviewAccess, interviewController.startIn
 router.post('/answer', protect, interviewController.submitAnswer);
 router.post('/follow-up', protect, interviewController.submitAnswerAndGenerateFollowUp);
 router.post('/questions', protect, questionController.generateQuestion);
-router.post('/coding/eval', protect, sandboxMiddleware.validateSandboxPayload, evaluateCodeValidator, validate, interviewController.evaluateCode);
+router.post('/coding/eval', protect, sandboxMiddleware.validateCodePayload, evaluateCodeValidator, validate, interviewController.evaluateCode);
 router.post('/evaluate-answer', protect, interviewController.evaluateAnswerRealtime);
 router.post('/telemetry', protect, interviewController.logTelemetry);
 router.post('/analyze-resume', protect, upload.single('resume'), analyzeResumeValidator, validate, interviewController.analyzeResumeAndMatchSkills);

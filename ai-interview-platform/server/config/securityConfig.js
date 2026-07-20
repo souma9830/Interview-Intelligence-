@@ -21,7 +21,7 @@ const CSP_DIRECTIVES = {
   workerSrc: [SELF, 'blob:'],
   formAction: [SELF],
   baseUri: [SELF],
-  upgradeInsecureRequests: true,
+  upgradeInsecureRequests: [],
 };
 
 const REPORT_URI = process.env.CSP_REPORT_URI || '';
