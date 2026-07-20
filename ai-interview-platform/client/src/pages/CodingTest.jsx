@@ -7,41 +7,7 @@ import { LoadingOverlay } from '../components/Common/LoadingOverlay';
 import MonacoEditorWrapper from '../components/Common/MonacoEditorWrapper';
 import Modal from '../components/Common/Modal';
 
-// Coding assessment window integrated with live execution telemetry and auto-saving drafts
-const LANGUAGE_BOILERPLATES = {
-  javascript: {
-    ext: 'js',
-    label: 'JavaScript',
-    'Frontend Engineer': `// Write your custom solution here\n`,
-    'Backend Engineer': `// Write your custom solution here\n`,
-    'Fullstack Engineer': `// Write your custom solution here\n`,
-    'AI / ML Engineer': `// Write your custom solution here\n`
-  },
-  cpp: {
-    ext: 'cpp',
-    label: 'C++',
-    'Frontend Engineer': `// Write your custom solution here\n`,
-    'Backend Engineer': `// Write your custom solution here\n`,
-    'Fullstack Engineer': `// Write your custom solution here\n`,
-    'AI / ML Engineer': `// Write your custom solution here\n`
-  },
-  java: {
-    ext: 'java',
-    label: 'Java',
-    'Frontend Engineer': `// Write your custom solution here\n`,
-    'Backend Engineer': `// Write your custom solution here\n`,
-    'Fullstack Engineer': `// Write your custom solution here\n`,
-    'AI / ML Engineer': `// Write your custom solution here\n`
-  },
-  python: {
-    ext: 'py',
-    label: 'Python',
-    'Frontend Engineer': `# Write your custom solution here\n`,
-    'Backend Engineer': `# Write your custom solution here\n`,
-    'Fullstack Engineer': `# Write your custom solution here\n`,
-    'AI / ML Engineer': `# Write your custom solution here\n`
-  }
-};
+import { LANGUAGE_BOILERPLATES } from '../utils/boilerplates';
 
 const ROLE_PROBLEMS = {
   'Frontend Engineer': {
