@@ -30,6 +30,7 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
     if (!validate()) return;
     setLoading(true);
     try {
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
 
@@ -57,10 +58,11 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       setTimeout(() => { 
         localStorage.setItem('camsense_token', token); 
         setToken(token); 
-        setUser({ uid: fbUser.uid, name: name || fbUser.displayName || email.split('@')[0], email: fbUser.email }); 
+        setUser({ uid: fbUser.uid, name: name || email.split('@')[0], email: email }); 
         setCurrentTab('home'); 
       }, 1200);
     } catch (err) {
+
       if (err.code === 'auth/email-already-in-use') {
         toast.show('Email already in use', 'error');
       } else if (err.code === 'auth/weak-password') {

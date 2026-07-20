@@ -14,6 +14,8 @@ import { useTabValidation } from './hooks/useTabValidation';
 import { TABS, AUTH_TABS, PROTECTED_TABS } from './constants/tabs';
 import PwaInstallPrompt from './components/Common/PwaInstallPrompt';
 import OfflineBanner from './components/Common/OfflineBanner';
+import GuestRoute from './components/Common/GuestRoute';
+import ProtectedRoute from './components/Common/ProtectedRoute';
 
 // Hook listeners for accessibility options and keyboard navigation shortcuts
 const Dashboard = lazy(() => import('./pages/Dashboard'));
