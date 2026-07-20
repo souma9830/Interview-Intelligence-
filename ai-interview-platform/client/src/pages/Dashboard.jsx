@@ -247,82 +247,63 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
                   const status = getScheduleStatus(schedule);
                   const isLocked = status.label === 'Upcoming';
                   return (
-                  <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
-                          <span style={{ fontSize: '10px', color: status.color, fontWeight: '500' }}>{status.label}</span>
+                    <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
+                            <span style={{ fontSize: '10px', color: status.color, fontWeight: '500' }}>{status.label}</span>
+                          </div>
+                          <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} • {schedule.durationMinutes} min</span>
+                          {schedule.notes && <span style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>{schedule.notes}</span>}
                         </div>
-                        <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} • {schedule.durationMinutes} min</span>
-                        {schedule.notes && <span style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>{schedule.notes}</span>}
+                        <button
+                          onClick={() => handleDeleteSchedule(schedule._id)}
+                          disabled={deletingSchedule === schedule._id}
+                          style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', padding: '4px' }}
+                          title="Delete schedule"
+                        >
+                          {deletingSchedule === schedule._id ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={12} />}
+                        </button>
                       </div>
-                      <button
-                        onClick={() => handleDeleteSchedule(schedule._id)}
-                        disabled={deletingSchedule === schedule._id}
-                        style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', padding: '4px' }}
-                        title="Delete schedule"
-                      >
-                        {deletingSchedule === schedule._id ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={12} />}
-                      </button>
-                    </div>
 
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                      <button
-                        disabled={isLocked}
-                  const isFuture = new Date(schedule.scheduledAt).getTime() > Date.now();
-                  return (
-                    <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
-                      <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} &bull; {schedule.durationMinutes} min</span>
-                      {schedule.notes && <span style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>{schedule.notes}</span>}
-                      <button
-                        disabled={isFuture}
-                        onClick={() => {
-                          setGlobalState(prev => ({ ...prev, role: schedule.role }));
-                          setCurrentTab('setup');
-                        }}
-                        style={{
-                          flex: 1, padding: '6px 12px', fontSize: '11px', borderRadius: '4px', border: 'none',
-                          cursor: isLocked ? 'not-allowed' : 'pointer',
-                          background: isLocked ? '#1a1a1a' : '#fff',
-                          color: isLocked ? '#555' : '#000',
-                          fontWeight: '600', transition: 'all 0.15s',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-                        }}
-                      >
-                        {isLocked ? <><Lock size={10} /> Locked</> : 'Start Session'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-              {schedules.length > ITEMS_PER_PAGE && (
-                <Pagination currentPage={schedulePage} totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)} onPageChange={setSchedulePage} />
-              )}
-              <button
-                onClick={() => setCurrentTab('schedule')}
-                style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto', textDecoration: 'underline' }}
-              >
-                View All <ExternalLink size={10} />
-              </button>
-                          marginTop: '8px', padding: '6px 12px', fontSize: '11px', borderRadius: '4px', border: 'none', cursor: isFuture ? 'not-allowed' : 'pointer',
-                          background: isFuture ? '#1a1a1a' : '#fff',
-                          color: isFuture ? '#555' : '#000',
-                          fontWeight: '600', transition: 'all 0.15s',
-                        }}
-                      >
-                        {isFuture ? 'Starts later' : 'Start Session'}
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                        <button
+                          disabled={isLocked}
+                          onClick={() => {
+                            setGlobalState(prev => ({ ...prev, role: schedule.role }));
+                            setCurrentTab('setup');
+                          }}
+                          style={{
+                            flex: 1, padding: '6px 12px', fontSize: '11px', borderRadius: '4px', border: 'none',
+                            cursor: isLocked ? 'not-allowed' : 'pointer',
+                            background: isLocked ? '#1a1a1a' : '#fff',
+                            color: isLocked ? '#555' : '#000',
+                            fontWeight: '600', transition: 'all 0.15s',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                          }}
+                        >
+                          {isLocked ? <><Lock size={10} /> Locked</> : 'Start Session'}
+                        </button>
+                      </div>
                     </div>
                   );
                 });
               })()}
             </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+            {schedules.length > ITEMS_PER_PAGE && (
+              <Pagination currentPage={schedulePage} totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)} onPageChange={setSchedulePage} />
+            )}
+            <button
+              onClick={() => setCurrentTab('schedule')}
+              style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto', textDecoration: 'underline' }}
+            >
+              View All <ExternalLink size={10} />
+            </button>
           </div>
+        </div>
       </div>
 
       {reports.length === 0 ? (
@@ -340,8 +321,7 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-          
+
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '16px' }}>
             {[
               { label: 'Interviews Completed', val: stats.total, icon: FileText, desc: 'Total sessions completed' },

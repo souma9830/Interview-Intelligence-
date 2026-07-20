@@ -3,12 +3,12 @@ import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Vid
 import VideoRecorder from '../components/Telemetry/VideoRecorder';
 import { getAuthHeader } from '../utils/authHeaders';
 import { useProctor } from '../hooks/useProctor';
-import { useProctorOffline } from '../hooks/useProctorOffline';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 export default function InterviewSession({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
   const interviewId = globalState.interviewId || 'demo_session_active';
-  const { isOnline } = useProctorOffline();
+  const isOnline = useOnlineStatus();
 
   // Redirect if no resume uploaded
   useEffect(() => {

@@ -26,7 +26,7 @@ module.exports.up = async () => {
   }
 
   await db.collection('users').createIndex({ email: 1 }, { unique: true, background: true });
-  await db.collection('users').createIndex({ firebaseUid: 1 }, { sparse: true, background: true });
+  await db.collection('users').createIndex({ firebaseUid: 1 }, { unique: true, sparse: true, background: true });
   await db.collection('interviews').createIndex({ user: 1, createdAt: -1 }, { background: true });
   await db.collection('reports').createIndex({ user: 1, createdAt: -1 }, { background: true });
   await db.collection('resumes').createIndex({ user: 1 }, { unique: true, background: true });

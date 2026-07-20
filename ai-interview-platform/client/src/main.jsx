@@ -7,13 +7,21 @@ import { queueOfflineRequest } from './utils/offlineQueue';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    // In development, unregister service workers to prevent stale cache issues with Vite HMR
+    if (import.meta.env.DEV) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((reg) => reg.unregister());
+      });
+      caches.keys().then((names) => {
+        names.forEach((name) => caches.delete(name));
+      });
+      return;
+    }
+
     navigator.serviceWorker.register('/sw.js', {
       scope: '/',
       updateViaCache: 'none',
-    }).then((reg) => {
-      if (window.location.hostname === 'localhost') {
-        console.log('[SW] Registered for development');
-      }
+    }).then(() => {
       navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'QUEUE_OFFLINE_REQUEST') {
           queueOfflineRequest({
