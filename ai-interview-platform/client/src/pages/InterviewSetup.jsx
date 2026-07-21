@@ -5,6 +5,7 @@ import { useMediaDevices } from '../hooks/useMediaDevices';
 import QuestionInputCard from '../components/Telemetry/QuestionInputCard';
 import { sanitizeForDisplay } from '../utils/security';
 import { useToast } from '../components/Common/ToastProvider';
+import { LANGUAGE_BOILERPLATES } from '../utils/boilerplates';
 
 const S = {
   card: { background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' },

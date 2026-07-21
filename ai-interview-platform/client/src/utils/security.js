@@ -38,3 +38,9 @@ export function validatePasswordStrength(password) {
   if (password.length < 8) return false;
   return /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password);
 }
+
+export function sanitizeCode(code) {
+  if (typeof code !== 'string') return '';
+  return code.replace(/[\x00-\x09\x0B-\x0C\x0E-\x1F\x7F]/g, ''); // strip control characters
+}
+

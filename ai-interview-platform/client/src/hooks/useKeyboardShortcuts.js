@@ -1,22 +1,55 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
-export function useKeyboardShortcuts(onToggleHelp) {
+/**
+ * Registers a map of keyboard shortcuts while the app is in an active (non-auth) state.
+ *
+ * Shortcut map format:
+ *   { [key]: { label: string, category: string, onPress: () => void } }
+ *
+ * Modifier keys are intentionally excluded so single-letter shortcuts do not
+ * fire while the user is typing inside an input, textarea, or select element.
+ *
+ * Returns the validated shortcut map (useful for rendering a help dialog).
+ */
+export function useKeyboardShortcuts(shortcuts = {}, enabled = true) {
+  // Keep a stable ref so the effect doesn't re-register on every render.
+  const shortcutsRef = useRef(shortcuts);
+  shortcutsRef.current = shortcuts;
+
   useEffect(() => {
+    if (!enabled) return;
+
     const handleKeyDown = (e) => {
-      // alt + ?/h to show keyboard shortcuts
-      if (e.altKey && (e.key === '?' || e.key === 'h')) {
+      // Do not fire shortcuts when the user is typing into a form control.
+      const tag = e.target?.tagName?.toLowerCase();
+      if (['input', 'textarea', 'select'].includes(tag)) return;
+      // Do not fire shortcuts when a modifier key is held (except Escape which is standalone).
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const handler = shortcutsRef.current[e.key];
+      if (handler?.onPress) {
         e.preventDefault();
-        onToggleHelp();
+        handler.onPress();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onToggleHelp]);
+  }, [enabled]);
+
+  return shortcuts;
 }
 
+/**
+ * Manages the open/closed state of the keyboard-shortcuts help dialog.
+ * Returns { isOpen, open, close, toggle } so callers can control it precisely.
+ */
 export function useShortcutsDialog() {
   const [isOpen, setIsOpen] = useState(false);
-  const toggle = () => setIsOpen(prev => !prev);
-  return { isOpen, toggle };
+
+  const open   = useCallback(() => setIsOpen(true),  []);
+  const close  = useCallback(() => setIsOpen(false), []);
+  const toggle = useCallback(() => setIsOpen(prev => !prev), []);
+
+  return { isOpen, open, close, toggle };
 }

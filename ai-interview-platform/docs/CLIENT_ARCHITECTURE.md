@@ -56,7 +56,7 @@ client/src/
     Telemetry/               # Interview recording components
       AdvancedTelemetryDashboard.jsx
       QuestionInputCard.jsx  # Custom question input
-      VideoRecorder.jsx      # WebRTC video capture
+      WebcamStream.jsx       # WebRTC video capture and recording
 
   hooks/                     # Custom React hooks
     useAbortableEffect.js    # Effect with AbortController
@@ -116,7 +116,7 @@ App
       Dashboard
       InterviewSetup
       InterviewSession
-        VideoRecorder
+        WebcamStream
       CodingTest
         Modal (cheat warning)
       Result

@@ -182,16 +182,6 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
     if (!validate()) return;
     setLoading(true);
     try {
-      const token = 'demo_token_active';
-      showToast('Signed in successfully!');
-      setTimeout(() => { 
-        localStorage.setItem('camsense_token', token); 
-        setToken(token); 
-        setUser({ uid: 'mock-uid', name: email.split('@')[0], email: email }); 
-        setCurrentTab('home'); 
-      }, 1200);
-    } catch (err) { 
-      showToast('Authentication failed. Check connection.', 'err');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
