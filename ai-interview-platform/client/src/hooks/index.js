@@ -1,4 +1,5 @@
 export { useTabValidation } from './useTabValidation';
+export { useDebounce } from './useDebounce';
 export { useFetch, wrapFetch } from './useFetch';
 export { useFocusTrap } from './useFocusTrap';
 export { useKeyboardShortcuts, useShortcutsDialog } from './useKeyboardShortcuts';

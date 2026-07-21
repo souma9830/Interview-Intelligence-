@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Sparkles, Code, Compass, AlertCircle, GraduationCap, FileText } from 'lucide-react';
 import { useMediaDevices } from '../hooks/useMediaDevices';
-// QuestionInputCard provides custom telemetry inputs for question setup
 import QuestionInputCard from '../components/Telemetry/QuestionInputCard';
 import { sanitizeForDisplay } from '../utils/security';
 import { useToast } from '../components/Common/ToastProvider';
 import { LANGUAGE_BOILERPLATES } from '../utils/boilerplates';
+import { useDebounce } from '../hooks/useDebounce';
 
 const S = {
   card: { background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -40,6 +40,10 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   const [useCustomQuestions, setUseCustomQuestions] = useState(false);
   const [customQuestionsText, setCustomQuestionsText] = useState('');
   const [resumeChecked, setResumeChecked] = useState(false);
+
+  // Debounced JD text — calculateMatchingScore fires 500ms after the user
+  // stops typing, instead of on every single keystroke.
+  const debouncedJobDescription = useDebounce(jobDescription, 500);
 
   const roles = [
     { name: 'Frontend Engineer', icon: Code, desc: 'React, System Architecture, UI performance' },
@@ -127,6 +131,14 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
     let rec = pct >= 80 ? 'Excellent match. Outstanding fits found.' : pct >= 50 ? 'Good overlap. Calibrating focused topics.' : 'Discrepancies identified. Review your profile.';
     setMatchData({ matchPercentage: pct, matchingSkills: matched, missingSkills: missing, recommendation: rec });
   };
+
+  // Re-run the client-side skill-gap score whenever the debounced JD changes
+  // and a parsed resume profile is already available.
+  useEffect(() => {
+    if (parsedProfile?.skills && debouncedJobDescription) {
+      calculateMatchingScore(parsedProfile.skills, debouncedJobDescription);
+    }
+  }, [debouncedJobDescription, parsedProfile]);
 
   const processUpload = async (file) => {
     setIsUploading(true);
