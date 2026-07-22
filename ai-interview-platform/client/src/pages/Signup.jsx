@@ -141,8 +141,29 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
 
   return (
     <div style={{ width: '100%', maxWidth: '400px', padding: '0 16px', fontFamily: 'Inter, sans-serif' }}>
-      <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '32px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#fff', margin: '0 0 4px' }}>Create account</h2>
+<div
+  style={{
+    background: "#111",
+    border: "1px solid #222",
+    borderRadius: "18px",
+    padding: "32px",
+    transition: "all 0.35s ease",
+    boxShadow:
+      "0 0 0 rgba(255,255,255,0), 0 10px 30px rgba(0,0,0,0.35)",
+  }}
+  onMouseOver={(e) => {
+    e.currentTarget.style.transform = "translateY(-6px)";
+    e.currentTarget.style.borderColor = "#3d3d3d";
+    e.currentTarget.style.boxShadow =
+      "0 0 30px rgba(255,255,255,0.08), 0 20px 50px rgba(0,0,0,0.45)";
+  }}
+  onMouseOut={(e) => {
+    e.currentTarget.style.transform = "translateY(0)";
+    e.currentTarget.style.borderColor = "#222";
+    e.currentTarget.style.boxShadow =
+      "0 0 0 rgba(255,255,255,0), 0 10px 30px rgba(0,0,0,0.35)";
+  }}
+>        <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#fff', margin: '0 0 4px' }}>Create account</h2>
         <p style={{ fontSize: '13px', color: '#666', margin: '0 0 24px' }}>Set up your profile to start mock interviews.</p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
