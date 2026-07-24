@@ -9,10 +9,12 @@ import { announceToScreenReader, getAriaInvalid, getErrorId } from '../utils/acc
 
 // Consumer of password strength indicators in related authentication pages
 const card = {
-  background: '#111',
-  border: '1px solid #1e1e1e',
-  borderRadius: '12px',
-  padding: '32px',
+  background: "#111",
+  border: "1px solid #1e1e1e",
+  borderRadius: "12px",
+  padding: "32px",
+  transition: "all 0.35s ease",
+  boxShadow: "0 0 20px rgba(255,255,255,0.04)",
 };
 
 const inp = (err) => ({
@@ -257,7 +259,21 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
 
   return (
     <div style={authPageContainer}>
-      <div style={card}>
+      <div
+  style={card}
+  onMouseOver={(e) => {
+    e.currentTarget.style.transform = "translateY(-6px)";
+    e.currentTarget.style.borderColor = "#3d3d3d";
+    e.currentTarget.style.boxShadow =
+      "0 0 30px rgba(255,255,255,0.10), 0 20px 45px rgba(0,0,0,0.45)";
+  }}
+  onMouseOut={(e) => {
+    e.currentTarget.style.transform = "translateY(0)";
+    e.currentTarget.style.borderColor = "#1e1e1e";
+    e.currentTarget.style.boxShadow =
+      "0 0 20px rgba(255,255,255,0.04)";
+  }}
+>
         <h2 style={authHeader}>Sign in</h2>
         <p style={authSubtext}>Enter your credentials to access the platform.</p>
 
